@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub, { type Book, type Rendition, type NavItem } from 'epubjs';
 import { useBookStore, hashText } from '../../store/useBookStore';
 import { translateText, TranslationError } from '../../services/translator';
@@ -43,15 +43,15 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [currentCfi, setCurrentCfi] = useState<string>(initialCfi || '');
+  const [_currentCfi, setCurrentCfi] = useState<string>(initialCfi || '');
   const { settings, currentBook, setSettingsOpen } = useBookStore();
   
   const [showControls, setShowControls] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [toc, setToc] = useState<NavItem[]>([]);
   const [currentChapter, setCurrentChapter] = useState<string>('');
-  const [progress, setProgress] = useState(0);
-  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [_progress, setProgress] = useState(0);
+  const [_timeLeft, setTimeLeft] = useState<string | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const startProgressRef = useRef<number | null>(null);
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,9 +199,6 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
       `;
       head.appendChild(themeStyle);
 
-      // Store container ref for refocusing after clicks
-      const containerElement = containerRef.current;
-
       // Add click handlers for paragraphs (translation) + restore cached translations
       const paragraphs = doc.querySelectorAll('p');
       paragraphs.forEach((p: HTMLElement) => {
@@ -345,7 +342,7 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
     });
 
     const handleResize = () => {
-      if (rendition) rendition.resize();
+      if (rendition) (rendition as any).resize();
     };
     window.addEventListener('resize', handleResize);
     
@@ -438,7 +435,7 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
     
     // Directly inject CSS into iframe for reliable theme switching
     try {
-      const contents = rendition.getContents();
+      const contents = rendition.getContents() as unknown as any[];
       contents.forEach((content: any) => {
         const doc = content.document;
         if (doc) {

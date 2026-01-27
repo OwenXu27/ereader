@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBookStore } from './store/useBookStore';
 import { EpubReader } from './components/Reader/EpubReader';
 import { Library } from './components/Library/Library';
