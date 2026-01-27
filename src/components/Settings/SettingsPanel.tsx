@@ -89,7 +89,7 @@ export const SettingsPanel: React.FC = () => {
                   {settings.translationEnabled && (
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-500">API URL</label>
+                        <label className="text-xs text-zinc-500">API URL <span className="text-red-500">*</span></label>
                         <input 
                           type="text"
                           value={settings.apiUrl}
@@ -98,11 +98,11 @@ export const SettingsPanel: React.FC = () => {
                           className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <p className="text-[10px] text-zinc-400">
-                          OpenAI-compatible API endpoint. Leave empty to use local proxy.
+                          Moonshot API: https://api.moonshot.cn/v1
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-500">API Key</label>
+                        <label className="text-xs text-zinc-500">API Key <span className="text-red-500">*</span></label>
                         <input 
                           type="password"
                           value={settings.apiKey}
@@ -111,7 +111,7 @@ export const SettingsPanel: React.FC = () => {
                           className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <p className="text-[10px] text-zinc-400">
-                          Your API key will be saved locally in browser storage.
+                          从 <a href="https://platform.moonshot.cn/" target="_blank" rel="noopener" className="text-blue-500 hover:underline">platform.moonshot.cn</a> 获取，保存在浏览器本地
                         </p>
                       </div>
                     </div>

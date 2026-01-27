@@ -47,49 +47,29 @@ A minimalist, tech-retro style EPUB reader with bilingual translation powered by
 
 ## Deploy to Vercel (Free)
 
-一键部署到 Vercel，让任何人都可以使用这个阅读器上传自己的书：
+一键部署到 Vercel，让任何人都可以使用这个阅读器：
 
-### 方式一：一键部署（推荐）
+### 部署步骤
 
 1. Fork 这个仓库到你的 GitHub
 2. 访问 [Vercel](https://vercel.com)，用 GitHub 登录
 3. 点击 "Add New Project" → 选择你 fork 的仓库
-4. 在部署前，配置 **Environment Variables**：
-   - `MOONSHOT_API_KEY`: 你的 Moonshot API Key（必填，在 [Moonshot 开放平台](https://platform.moonshot.cn/) 获取）
-   - `MOONSHOT_UPSTREAM`: `https://api.moonshot.cn/v1/chat/completions`（可选，默认值）
-5. 点击 "Deploy" 等待部署完成
+4. 点击 "Deploy" 等待部署完成（无需配置环境变量）
 
-### 方式二：Vercel CLI
+### 用户如何使用
 
-```bash
-# 安装 Vercel CLI
-npm i -g vercel
+1. 访问你部署的网站
+2. 上传自己的 EPUB 书籍（存在浏览器本地，不上传服务器）
+3. 如需翻译功能：
+   - 打开设置 → 开启 Translation
+   - 填写 API URL: `https://api.moonshot.cn/v1`
+   - 填写自己的 API Key（从 [platform.moonshot.cn](https://platform.moonshot.cn/) 免费获取）
+4. 阅读时点击段落即可翻译
 
-# 登录
-vercel login
+### 成本
 
-# 部署（首次会创建项目）
-vercel
-
-# 配置环境变量
-vercel env add MOONSHOT_API_KEY production
-# 输入你的 API Key
-
-# 重新部署以应用环境变量
-vercel --prod
-```
-
-### 部署后的使用
-
-- 每个访问者可以上传自己的 EPUB 书籍
-- 书籍存储在用户的浏览器本地（IndexedDB），不上传到服务器
-- 翻译功能通过你配置的 API Key 使用 Moonshot AI
-- 用户无需自己配置 API Key（除非他们想用自己的）
-
-### 成本说明
-
-- **Vercel**: 免费额度足够个人/小型使用
-- **Moonshot API**: 有免费额度，超出后按量计费（很便宜）
+- **Vercel 部署**: 完全免费
+- **Moonshot API**: 每个用户用自己的 Key，新用户有免费额度
 
 ## Technologies
 
