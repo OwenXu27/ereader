@@ -3,7 +3,7 @@ const DEFAULT_API_URL =
   (import.meta as any).env?.VITE_MOONSHOT_CHAT_COMPLETIONS_URL || '/api/chat/completions';
 
 const MODEL =
-  (import.meta as any).env?.VITE_MOONSHOT_MODEL || 'moonshot-v1-8k';
+  (import.meta as any).env?.VITE_MOONSHOT_MODEL || 'kimi-k2-0711-preview';
 
 /**
  * Normalize API URL to chat completions endpoint
