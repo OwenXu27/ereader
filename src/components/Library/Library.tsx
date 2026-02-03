@@ -4,6 +4,35 @@ import { saveBook, deleteBook } from '../../services/db';
 import { Plus, Trash2, Book as BookIcon, Settings, Loader2 } from 'lucide-react';
 import ePub from 'epubjs';
 
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+const extractCoverDataUrl = async (book: ePub.Book): Promise<string> => {
+  let coverUrl = '';
+  try {
+    coverUrl = await book.coverUrl();
+    if (!coverUrl) return '';
+    if (coverUrl.startsWith('data:')) return coverUrl;
+
+    const response = await fetch(coverUrl);
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    return await blobToDataUrl(blob);
+  } catch (e) {
+    console.warn('No cover found', e);
+    return '';
+  } finally {
+    if (coverUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(coverUrl);
+    }
+  }
+};
+
 /**
  * Generate a UUID, with fallback for browsers without crypto.randomUUID
  */
@@ -44,14 +73,7 @@ export const Library: React.FC = () => {
       const metadata = await book.loaded.metadata;
       console.log('Metadata loaded:', metadata);
       
-      // Cover is tricky with epubjs without rendering, but we can try
-      let coverUrl = '';
-      try {
-          const coverUrlObj = await book.coverUrl();
-          if (coverUrlObj) coverUrl = coverUrlObj;
-      } catch (e) {
-          console.warn('No cover found');
-      }
+      const coverUrl = await extractCoverDataUrl(book);
 
       const newBook = {
         id: generateUUID(),
@@ -131,16 +153,28 @@ export const Library: React.FC = () => {
               onClick={() => setCurrentBook(book)}
               className="group relative aspect-[2/3] bg-white dark:bg-zinc-800 rounded shadow-sm hover:shadow-md transition cursor-pointer border border-zinc-200 dark:border-zinc-700 overflow-hidden"
             >
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                <BookIcon size={48} className="text-zinc-300 mb-2" />
-                <h3 className="font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2">{book.title}</h3>
-                <p className="text-xs text-zinc-500 mt-1">{book.author}</p>
-                {book.progress > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-100 dark:bg-zinc-700">
-                        <div className="h-full bg-blue-500" style={{ width: `${book.progress * 100}%` }} />
-                    </div>
-                )}
+              {book.cover ? (
+                <img
+                  src={book.cover}
+                  alt={`${book.title} cover`}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <BookIcon size={48} className="text-zinc-300" />
+                </div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-black/95 via-black/70 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-3">
+                <h3 className="font-medium text-white text-sm line-clamp-2">{book.title}</h3>
+                <p className="text-xs text-zinc-200 mt-1">{book.author}</p>
               </div>
+              {book.progress > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/40">
+                  <div className="h-full bg-blue-500" style={{ width: `${book.progress * 100}%` }} />
+                </div>
+              )}
               <button 
                 onClick={(e) => handleRemove(e, book.id)}
                 className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
