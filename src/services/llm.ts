@@ -195,3 +195,123 @@ export const translateText = async (
   console.error('Translation failed after retries:', lastError);
   throw lastError ?? new TranslationError('Unknown translation error');
 };
+
+/**
+ * Chat message type for conversation
+ */
+export interface ChatMessageType {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const CHAT_SYSTEM_PROMPT = `你是一位博学的阅读辅助助手，帮助用户深入理解英文书籍中遇到的疑惑。
+
+## 核心职责
+
+1. **名词解释**：解释专有名词、术语、人名、地名、机构名、概念等
+   - 提供准确的中文译名和原文
+   - 说明其含义、来源、重要性
+   
+2. **句法分析**：帮助理解复杂的英文句式
+   - 分析长难句结构
+   - 解释特殊语法、习语、俚语
+   - 说明修辞手法
+   
+3. **背景知识**：提供理解文本所需的上下文
+   - 历史背景、文化背景
+   - 相关事件、人物关系
+   - 学科知识、行业常识
+
+## 回答风格
+
+- **准确**：确保信息正确，不确定时说明
+- **简洁**：直击要点，避免冗长废话
+- **易懂**：用通俗的语言解释复杂概念
+- **有深度**：适当展开，帮助真正理解而非表面了解
+
+## 格式规范
+
+- 引号使用直角引号「」『』
+- 中英混排加空格（如：HTTP 协议、第 3 章）
+- 专有名词格式：中文译名（English Term）
+- 适当使用列表、分段提高可读性`;
+
+/**
+ * Send a chat message and get a response
+ */
+export const sendChatMessage = async (
+  messages: ChatMessageType[],
+  apiUrl: string,
+  apiKey: string,
+  context?: string
+): Promise<string> => {
+  const endpoint = normalizeApiUrl(apiUrl);
+  const isAbsolute = /^https?:\/\//i.test(endpoint);
+
+  if (isAbsolute && !apiKey) {
+    throw new TranslationError('API Key is required', undefined, false);
+  }
+
+  // Build messages array with system prompt and optional context
+  const systemContent = context 
+    ? `${CHAT_SYSTEM_PROMPT}\n\n当前引用的文本：\n「${context}」`
+    : CHAT_SYSTEM_PROMPT;
+
+  const apiMessages: ChatMessage[] = [
+    { role: 'system', content: systemContent },
+    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+  ];
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isAbsolute ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: apiMessages,
+          temperature: 0.5,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const rawText = await response.text().catch(() => '');
+        const isRetryable = isRetryableError(response.status);
+        throw new TranslationError(
+          `API error: ${response.status}${rawText ? ` - ${rawText}` : ''}`,
+          response.status,
+          isRetryable
+        );
+      }
+
+      const data: ChatResponse = await response.json();
+      const content = data.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new TranslationError('Empty response from API', undefined, false);
+      }
+
+      return content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      const isRetryable = error instanceof TranslationError && error.isRetryable;
+      const hasRetriesLeft = attempt < MAX_RETRIES;
+
+      if (isRetryable && hasRetriesLeft) {
+        const waitTime = RETRY_DELAY_MS * Math.pow(2, attempt);
+        await delay(waitTime);
+        continue;
+      }
+      break;
+    }
+  }
+
+  throw lastError ?? new TranslationError('Unknown chat error');
+};

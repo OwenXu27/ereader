@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub, { type Book, type Rendition, type NavItem } from 'epubjs';
 import { useBookStore, hashText } from '../../store/useBookStore';
-import { translateText, TranslationError } from '../../services/translator';
-import { Settings, ArrowLeft, List, X } from 'lucide-react';
+import { translateText, TranslationError } from '../../services/llm';
+import { Settings, ArrowLeft, List, X, MessageCircle } from 'lucide-react';
 import { updateBookProgress as saveProgressToDB } from '../../services/db';
 import clsx from 'clsx';
+import { ChatSidebar } from './ChatSidebar';
 
 // Theme colors - shared between initialization and dynamic updates
 const THEME_COLORS = {
@@ -43,23 +44,32 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [_currentCfi, setCurrentCfi] = useState<string>(initialCfi || '');
+  const currentCfiRef = useRef<string>(initialCfi || '');
   const { settings, currentBook, setSettingsOpen } = useBookStore();
   
   const [showControls, setShowControls] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
   const [toc, setToc] = useState<NavItem[]>([]);
   const [currentChapter, setCurrentChapter] = useState<string>('');
-  const [_progress, setProgress] = useState(0);
-  const [_timeLeft, setTimeLeft] = useState<string | null>(null);
+  const progressRef = useRef(0);
+  const timeLeftRef = useRef<string | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const startProgressRef = useRef<number | null>(null);
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastProgressSaveAt = useRef(0);
+  const pendingProgressSave = useRef<{ bookId: string; cfi: string; percentage: number } | null>(null);
+  const [quickPromptMode, setQuickPromptMode] = useState<'grammar' | 'background' | 'plain' | null>(null);
 
   useEffect(() => {
     return () => {
       if (hideControlsTimer.current) {
         clearTimeout(hideControlsTimer.current);
+      }
+      if (progressSaveTimer.current) {
+        clearTimeout(progressSaveTimer.current);
       }
     };
   }, []);
@@ -128,7 +138,7 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
     // Reset stats on book load
     startTimeRef.current = Date.now();
     startProgressRef.current = null;
-    setTimeLeft(null);
+    timeLeftRef.current = null;
 
     const book = ePub(bookData);
     bookRef.current = book;
@@ -154,6 +164,7 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
       const bookId = useBookStore.getState().currentBook?.id;
       const currentThemeName = useBookStore.getState().settings.theme;
       const currentTheme = THEME_COLORS[currentThemeName];
+      const cleanupHandlers: Array<() => void> = [];
       
       // Inject structural styles for translation & paper theme base
       const style = doc.createElement('style');
@@ -161,8 +172,14 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
         body {
             font-family: 'Merriweather', 'Georgia', serif !important;
             line-height: 1.6 !important;
-            -webkit-user-select: none;
-            user-select: none;
+        }
+        ::selection {
+          background-color: rgba(208, 170, 33, 0.6) !important;
+          color: inherit !important;
+        }
+        ::-moz-selection {
+          background-color: rgba(208, 170, 33, 0.6) !important;
+          color: inherit !important;
         }
         .translation-block {
           font-family: 'Inter', sans-serif;
@@ -221,9 +238,7 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
         }
         
         p.style.cursor = 'pointer';
-        p.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            
+        const handleDblClick = async () => {
             const currentSettings = useBookStore.getState().settings;
             if (!currentSettings.translationEnabled) return;
 
@@ -253,32 +268,54 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
                 loader.textContent = errorMessage;
                 p.removeAttribute('data-translated');
             }
-        });
-      });
-
-      // Click handler for navigation (left/right zones)
-      doc.body.addEventListener('click', (e: MouseEvent) => {
-        const bodyWidth = doc.body.clientWidth;
-        const clickX = e.clientX;
-        const ratio = clickX / bodyWidth;
-
-        if (ratio < 0.3) {
-          rendition.prev();
-        } else if (ratio > 0.7) {
-          rendition.next();
-        }
-        // Center click does nothing now - use edge hover for controls
+        };
+        p.addEventListener('dblclick', handleDblClick);
+        cleanupHandlers.push(() => p.removeEventListener('dblclick', handleDblClick));
       });
 
       // Keyboard handler inside iframe - dispatch to parent window
-      doc.addEventListener('keydown', (e: KeyboardEvent) => {
+      const handleIframeKeydown = (e: KeyboardEvent) => {
+        // Quick prompt shortcuts inside iframe (Option/Alt + G/D/C)
+        if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === 'KeyG' || e.code === 'KeyD' || e.code === 'KeyC')) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('reader-quickprompt', { detail: { code: e.code } }));
+          return;
+        }
+
+        // Navigation keys - forward to parent
         if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'Escape') {
           e.preventDefault();
           e.stopPropagation();
           // Dispatch custom event to parent window for unified handling
           window.dispatchEvent(new CustomEvent('reader-keydown', { detail: { key: e.key } }));
         }
-      });
+      };
+      doc.addEventListener('keydown', handleIframeKeydown);
+      cleanupHandlers.push(() => doc.removeEventListener('keydown', handleIframeKeydown));
+
+      // Capture text selection for chat sidebar
+      const handleSelectionMouseup = () => {
+        const selection = doc.getSelection();
+        const text = selection?.toString().trim();
+        if (text && text.length > 0) {
+          window.dispatchEvent(new CustomEvent('reader-selection', { detail: { text } }));
+        }
+      };
+      doc.addEventListener('mouseup', handleSelectionMouseup);
+      cleanupHandlers.push(() => doc.removeEventListener('mouseup', handleSelectionMouseup));
+
+      const cleanup = () => {
+        cleanupHandlers.forEach((fn) => fn());
+      };
+
+      if (contents?.on) {
+        try {
+          contents.on('unload', cleanup);
+        } catch {
+          // ignore if contents doesn't support unload
+        }
+      }
     });
 
     rendition.display(initialCfi || undefined).then(() => {
@@ -286,12 +323,42 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
       // Theme will be applied by the other effect
     });
 
+    const flushProgressSave = () => {
+      const pending = pendingProgressSave.current;
+      if (!pending) return;
+      const { bookId, cfi, percentage } = pending;
+      pendingProgressSave.current = null;
+      lastProgressSaveAt.current = Date.now();
+      useBookStore.getState().updateBookProgress(bookId, cfi, percentage);
+      saveProgressToDB(bookId, cfi, percentage);
+    };
+
+    const scheduleProgressSave = (bookId: string, cfi: string, percentage: number) => {
+      pendingProgressSave.current = { bookId, cfi, percentage };
+      const now = Date.now();
+      const elapsed = now - lastProgressSaveAt.current;
+      const throttleMs = 1500;
+
+      if (elapsed >= throttleMs && !progressSaveTimer.current) {
+        flushProgressSave();
+        return;
+      }
+
+      if (!progressSaveTimer.current) {
+        const wait = Math.max(throttleMs - elapsed, 0);
+        progressSaveTimer.current = setTimeout(() => {
+          progressSaveTimer.current = null;
+          flushProgressSave();
+        }, wait);
+      }
+    };
+
     rendition.on('relocated', (location: any) => {
       const startCfi = location.start.cfi;
       const percentage = location.start.percentage;
       
-      setCurrentCfi(startCfi);
-      setProgress(percentage);
+      currentCfiRef.current = startCfi;
+      progressRef.current = percentage;
 
       // Find current chapter from TOC
       const currentHref = location.start.href;
@@ -327,17 +394,16 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
              const estimatedTotalMinutes = timeSpentMinutes / progressMade;
              const remainingMinutes = estimatedTotalMinutes * (1 - percentage);
              
-             if (remainingMinutes < 1) setTimeLeft('< 1 min left');
-             else if (remainingMinutes > 600) setTimeLeft('> 10 hrs left');
-             else setTimeLeft(`${Math.ceil(remainingMinutes)} min left`);
+             if (remainingMinutes < 1) timeLeftRef.current = '< 1 min left';
+             else if (remainingMinutes > 600) timeLeftRef.current = '> 10 hrs left';
+             else timeLeftRef.current = `${Math.ceil(remainingMinutes)} min left`;
           }
       }
 
       const bookId = useBookStore.getState().currentBook?.id;
       if (bookId) {
         // Update both store (for UI) and IndexedDB (for persistence)
-        useBookStore.getState().updateBookProgress(bookId, startCfi, percentage);
-        saveProgressToDB(bookId, startCfi, percentage);
+        scheduleProgressSave(bookId, startCfi, percentage);
       }
     });
 
@@ -350,35 +416,44 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
     setTimeout(() => containerRef.current?.focus(), 100);
 
     return () => {
+      if (progressSaveTimer.current) {
+        clearTimeout(progressSaveTimer.current);
+        progressSaveTimer.current = null;
+      }
+      flushProgressSave();
       window.removeEventListener('resize', handleResize);
       book.destroy();
     };
   }, [bookData]); // Only re-run if book data changes
   
   // Separate effect for keyboard handling - uses refs to avoid stale closures
-  const lastNavTimeRef = useRef(0);
-  const NAV_THROTTLE_MS = 150; // Minimum time between navigations
+  const isNavigatingRef = useRef(false);
   
   useEffect(() => {
     // Unified handler for both native keydown and custom iframe events
-    const handleNavigation = (key: string) => {
+    const handleNavigation = async (key: string) => {
       if (showToc) return;
       
       const rendition = renditionRef.current;
       if (!rendition) return;
       
-      const now = Date.now();
+      // Prevent navigation while previous one is in progress
+      if (isNavigatingRef.current) return;
       
       if (key === 'ArrowRight' || key === ' ') {
-        // Throttle rapid navigation
-        if (now - lastNavTimeRef.current < NAV_THROTTLE_MS) return;
-        lastNavTimeRef.current = now;
-        rendition.next();
+        isNavigatingRef.current = true;
+        try {
+          await rendition.next();
+        } finally {
+          isNavigatingRef.current = false;
+        }
       } else if (key === 'ArrowLeft') {
-        // Throttle rapid navigation
-        if (now - lastNavTimeRef.current < NAV_THROTTLE_MS) return;
-        lastNavTimeRef.current = now;
-        rendition.prev();
+        isNavigatingRef.current = true;
+        try {
+          await rendition.prev();
+        } finally {
+          isNavigatingRef.current = false;
+        }
       } else if (key === 'Escape') {
         onClose();
       }
@@ -413,14 +488,72 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
     };
   }, [onClose, showToc]);
   
-  // Keep focus on container when window regains focus
+  // Keep focus on container when window regains focus (but not when chat is open)
   useEffect(() => {
     const handleWindowFocus = () => {
+      // Don't steal focus if chat sidebar is open (user might be typing)
+      if (showChat) return;
       setTimeout(() => containerRef.current?.focus(), 50);
     };
     window.addEventListener('focus', handleWindowFocus);
     return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [showChat]);
+
+  // Listen for text selection from iframe
+  useEffect(() => {
+    const handleSelection = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text: string }>;
+      setSelectedText(customEvent.detail.text);
+    };
+    window.addEventListener('reader-selection', handleSelection);
+    return () => window.removeEventListener('reader-selection', handleSelection);
   }, []);
+
+  // Global keyboard shortcuts for quick prompts when chat is closed
+  useEffect(() => {
+    const triggerQuickPrompt = (code: 'KeyG' | 'KeyD' | 'KeyC') => {
+      if (!selectedText || showToc) return;
+      const mode = code === 'KeyG' ? 'grammar' : code === 'KeyD' ? 'background' : 'plain';
+      setQuickPromptMode(mode);
+      setShowChat(true);
+    };
+
+    const handleQuickPromptKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.metaKey || e.ctrlKey) return;
+      if (e.code === 'KeyG' || e.code === 'KeyD' || e.code === 'KeyC') {
+        e.preventDefault();
+        triggerQuickPrompt(e.code as 'KeyG' | 'KeyD' | 'KeyC');
+      }
+    };
+
+    const handleQuickPromptFromIframe = (e: Event) => {
+      const customEvent = e as CustomEvent<{ code: string }>;
+      const code = customEvent.detail.code;
+      if (code === 'KeyG' || code === 'KeyD' || code === 'KeyC') {
+        triggerQuickPrompt(code as 'KeyG' | 'KeyD' | 'KeyC');
+      }
+    };
+
+    window.addEventListener('keydown', handleQuickPromptKey);
+    window.addEventListener('reader-quickprompt', handleQuickPromptFromIframe);
+    return () => {
+      window.removeEventListener('keydown', handleQuickPromptKey);
+      window.removeEventListener('reader-quickprompt', handleQuickPromptFromIframe);
+    };
+  }, [selectedText, showToc]);
+
+  // Resize epub rendition when chat sidebar toggles
+  useEffect(() => {
+    if (!renditionRef.current || !isReady) return;
+    
+    // Small delay to allow CSS transition to complete
+    const timer = setTimeout(() => {
+      // Trigger window resize event for epub.js to recalculate
+      window.dispatchEvent(new Event('resize'));
+    }, 350);
+    
+    return () => clearTimeout(timer);
+  }, [showChat, isReady]);
 
   // Apply theme and font size when settings change
   useEffect(() => {
@@ -516,14 +649,20 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
 
   return (
     <div 
-      ref={containerRef}
-      tabIndex={0}
-      onClick={handleContainerClick}
-      onFocus={() => {}} // Prevent outline but keep focusable
-      className={clsx("relative w-full h-full transition-colors duration-300 overflow-hidden outline-none", bgColor)}
+      className={clsx("relative w-full h-full transition-colors duration-300 overflow-hidden outline-none flex", bgColor)}
     >
-      {/* Full-screen Reader Area */}
-      <div ref={viewerRef} className="absolute inset-0 w-full h-full" />
+      {/* Reader Area - fixed content width, centered when no chat */}
+      <div 
+        ref={containerRef}
+        tabIndex={0}
+        onClick={handleContainerClick}
+        onFocus={() => {}}
+        className={clsx(
+          "relative h-full transition-all duration-300 outline-none w-[76%]",
+          showChat ? "" : "mx-auto"
+        )}
+      >
+        <div ref={viewerRef} className="absolute inset-0 w-full h-full" />
 
       {/* Top edge hover zone - triggers control panel */}
       <div 
@@ -568,6 +707,19 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
             </div>
 
             <button 
+              onClick={() => setShowChat(true)} 
+              className={clsx(
+                "p-2 backdrop-blur-sm rounded-full shadow-sm transition-colors",
+                selectedText 
+                  ? "bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200" 
+                  : "bg-white/90 dark:bg-zinc-800/90 hover:bg-white dark:hover:bg-zinc-700"
+              )}
+              title="阅读助手"
+            >
+              <MessageCircle size={20} className={selectedText ? "text-white dark:text-zinc-900" : "text-zinc-700 dark:text-zinc-300"} />
+            </button>
+
+            <button 
               onClick={() => setSettingsOpen(true)} 
               className="p-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white dark:hover:bg-zinc-700 transition-colors"
             >
@@ -578,14 +730,18 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
 
       </div>
 
-      {/* Table of Contents Panel */}
+      </div>
+
+      {/* Table of Contents Panel - positioned relative to outer reader container */}
       <div className={clsx(
-        "absolute inset-y-0 left-0 z-30 w-80 max-w-[85vw] bg-white dark:bg-zinc-900 shadow-2xl transition-transform duration-300",
-        showToc ? "translate-x-0" : "-translate-x-full"
+        "absolute inset-y-0 left-0 z-30 w-72 max-w-[85vw] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300",
+        showToc ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none"
       )}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
-            <h2 className="font-semibold text-lg">Table of Contents</h2>
+            <h2 className="font-semibold text-sm text-zinc-800 dark:text-zinc-100 tracking-wide">
+              目录
+            </h2>
             <button 
               onClick={() => setShowToc(false)}
               className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
@@ -608,6 +764,18 @@ export const EpubReader: React.FC<EpubReaderProps> = ({ bookData, initialCfi, on
         <div 
           className="absolute inset-0 z-25 bg-black/20" 
           onClick={() => setShowToc(false)}
+        />
+      )}
+
+      {/* Chat Sidebar - fixed 24% width, pushes centered reader to the left */}
+      {showChat && (
+        <ChatSidebar
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          selectedText={selectedText}
+          onClearSelection={() => setSelectedText('')}
+          quickPromptMode={quickPromptMode}
+          onQuickPromptHandled={() => setQuickPromptMode(null)}
         />
       )}
 
