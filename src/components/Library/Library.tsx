@@ -15,8 +15,9 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
 const extractCoverDataUrl = async (book: ePub.Book): Promise<string> => {
   let coverUrl = '';
   try {
-    coverUrl = await book.coverUrl();
-    if (!coverUrl) return '';
+    const rawCoverUrl = await book.coverUrl();
+    if (!rawCoverUrl) return '';
+    coverUrl = rawCoverUrl;
     if (coverUrl.startsWith('data:')) return coverUrl;
 
     const response = await fetch(coverUrl);
