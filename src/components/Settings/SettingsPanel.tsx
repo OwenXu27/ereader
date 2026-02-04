@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBookStore } from '../../store/useBookStore';
+import type { ThemeType } from '../../hooks/useTheme';
 import { X, Globe, ShieldAlert } from 'lucide-react';
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -36,7 +37,7 @@ export const SettingsPanel: React.FC = () => {
                     {['light', 'dark', 'sepia'].map((t) => (
                       <button
                         key={t}
-                        onClick={() => updateSettings({ theme: t as any })}
+                        onClick={() => updateSettings({ theme: t as ThemeType })}
                         className={clsx(
                           "flex-1 py-2 px-4 rounded-lg border text-sm capitalize transition",
                           settings.theme === t 

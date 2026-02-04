@@ -63,14 +63,11 @@ app.post("/api/chat/completions", async (req, res) => {
 });
 
 const server = app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(`[proxy] listening on http://localhost:${PORT}`);
-  // eslint-disable-next-line no-console
   console.log(`[proxy] forwarding to ${UPSTREAM}`);
 });
 
 server.on("error", (err) => {
-  // eslint-disable-next-line no-console
   console.error("[proxy] server error", err);
 });
 

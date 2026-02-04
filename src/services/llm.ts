@@ -1,58 +1,15 @@
+import { createLLMClient, type LLMConfig, type ChatMessage } from '../utils/llm-client';
+
 // Default configuration from environment variables
-const DEFAULT_API_URL =
-  (import.meta as any).env?.VITE_MOONSHOT_CHAT_COMPLETIONS_URL || '/api/chat/completions';
-
-const MODEL =
-  (import.meta as any).env?.VITE_MOONSHOT_MODEL || 'kimi-k2-turbo-preview';
-
-/**
- * Normalize API URL to chat completions endpoint
- * Accepts:
- * - full endpoint: https://.../v1/chat/completions
- * - base url: https://.../v1 (or .../v1/)
- * - empty string: uses default
- */
-const normalizeApiUrl = (url: string): string => {
-  const raw = url.trim() || DEFAULT_API_URL;
-  const trimmed = raw.replace(/\/+$/, '');
-  if (trimmed.endsWith('/v1')) return `${trimmed}/chat/completions`;
-  if (!trimmed.includes('/chat/completions')) return `${trimmed}/chat/completions`;
-  return trimmed;
+const DEFAULT_CONFIG: LLMConfig = {
+  apiUrl: import.meta.env?.VITE_MOONSHOT_CHAT_COMPLETIONS_URL || '/api/chat/completions',
+  model: import.meta.env?.VITE_MOONSHOT_MODEL || 'kimi-k2-turbo-preview',
+  temperature: (() => {
+    const v = import.meta.env?.VITE_MOONSHOT_TEMPERATURE;
+    const n = v ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : 0.3;
+  })(),
 };
-
-const TEMPERATURE = (() => {
-  const v = (import.meta as any).env?.VITE_MOONSHOT_TEMPERATURE;
-  const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : 0.3;
-})();
-
-// Retry configuration
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 1000;
-const MAX_TEXT_LENGTH = 6000;
-
-// Types
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-interface ChatChoice {
-  message: {
-    content: string;
-  };
-  index: number;
-  finish_reason: string;
-}
-
-interface ChatResponse {
-  choices: ChatChoice[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
 
 export class TranslationError extends Error {
   readonly statusCode?: number;
@@ -66,135 +23,177 @@ export class TranslationError extends Error {
   }
 }
 
-const SYSTEM_PROMPT = `你是一位资深书籍翻译专家。将英文翻译为流畅、地道的中文，让读者感觉不到这是译作。
+// ============================================
+// 1. 段落翻译 Prompt - 优化版
+// ============================================
+const TRANSLATION_SYSTEM_PROMPT = `你是一位精通中英双语的文学翻译家，专精于将英文书籍翻译为流畅、优雅的中文。你的目标是让读者忘记这是在阅读译文。
 
-## 翻译原则
-- 消除翻译腔：避免「进行了」「被...所」「的的不休」等欧化表达
-- 被动语态转主动：It is considered → 普遍认为
-- 长句拆分：超过 40 字需断句，保持阅读节奏
+## 核心翻译原则
 
-## 排版规范（必须遵守）
-- 引号：使用直角引号「」『』，禁用 "" ''
-- 中英混排：中文与英文/数字之间加空格（如：使用 AI 技术、共 3 个）
-- 专有名词首次出现：中文译名（Original Term），如：冒名顶替综合症（Imposter Syndrome）
-- 省略号：……  破折号：——
+1. **地道自然**
+   - 消除翻译腔：不用「进行」「予以」「被...所」「的的不休」等欧化句式
+   - 化被动为主动：It is widely acknowledged → 人们普遍认为 / 学界公认
+   - 意译优先： capture the essence, not just words
 
-仅输出译文，不要解释。`;
+2. **语言节奏**
+   - 长句拆分：超过 35 字考虑断句，保持呼吸感
+   - 避免连续使用「的」「了」「着」
+   - 适当保留英文的节奏和韵律感
 
-/**
- * Delay execution for specified milliseconds
- */
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+3. **语境适配**
+   - 文学性文本：注重美感和意象传达
+   - 学术/技术文本：准确优先，保留术语
+   - 对话：口语化，符合人物身份
 
-/**
- * Determine if an error is retryable based on status code
- */
-const isRetryableError = (status: number): boolean => {
-  // Retry on rate limit (429), server errors (5xx), or network issues
-  return status === 429 || (status >= 500 && status < 600);
+## 排版规范（严格遵守）
+
+- 引号：中文直角引号「」『』，英文用弯引号 'single' "double"
+- 中英混排：中文与英文/数字之间加空格（如：使用 AI 技术、第 3 章）
+- 专有名词：首次出现用「中文译名（Original Term）」，如：冒名顶替综合症（Imposter Syndrome）
+- 标点：省略号用……，破折号用——，不用 ... 或 ---
+- 段落：保持原文段落结构，不要合并或拆分
+
+## 输出要求
+
+只输出翻译后的中文段落，不要：
+- 添加解释或注释
+- 输出原文对照
+- 使用 markdown 代码块包裹
+
+直接给出最自然的中文译文。`;
+
+// ============================================
+// 2. 阅读助手 Prompt - 优化版
+// ============================================
+const CHAT_SYSTEM_PROMPT = `你是一位博学的私人阅读导师，正在陪伴读者阅读一本英文书籍。你的角色是帮助读者跨越语言和文化障碍，深入理解文本。
+
+## 核心能力
+
+1. **词汇与表达**
+   - 解释生词、短语、习语、俚语的含义和用法
+   - 说明词语的语境义（非词典义）
+   - 提供同义替换和常见搭配
+
+2. **句法剖析**
+   - 拆解长难句结构，标注主干和修饰成分
+   - 解释特殊语法现象（倒装、省略、强调等）
+   - 说明修辞手法及其效果
+
+3. **文化与背景**
+   - 历史事件、社会背景、文化典故
+   - 作者信息、写作时代、文学流派
+   - 引用的典故、圣经、神话、文学作品
+
+4. **逻辑与论证**（非虚构类）
+   - 梳理论证结构
+   - 解释专业概念
+   - 补充相关学科知识
+
+## 回答风格
+
+- **简洁精准**：控制在 200-400 字，直击要点
+- **层次分明**：使用 1. 2. 3. 或 - 分点说明
+- **循循善诱**：先给直观理解，再深入细节
+- **坦诚谦逊**：不确定时明确说明，不编造
+
+## 格式规范
+
+- 引号：直角引号「」用于引用，『』用于嵌套
+- 术语：中文译名（English Term）
+- 代码/原文：用反引号包裹，如 \`original text\`
+- 强调：用 **粗体** 标出关键概念
+
+## 对话原则
+
+- 如果用户只是问单词意思，给出简明释义 + 例句即可
+- 如果用户询问复杂概念，先给概述再展开
+- 主动关联前文已解释过的内容，避免重复
+- 鼓励用户继续提问，保持对话连贯性`;
+
+// ============================================
+// 3. Quick Prompts - 结构化输出版
+// ============================================
+
+export const QUICK_PROMPTS = {
+  /** 语法分析：结构化拆解句子 */
+  grammar: (text: string) => `请分析以下英文句子的语法结构：
+
+「${text}」
+
+请按以下格式回答：
+
+**1. 主干提取**
+找出主谓宾/主系表核心结构
+
+**2. 修饰成分**
+- 定语从句/分词短语修饰什么
+- 状语表示时间、条件、原因还是其他
+- 插入语的作用
+
+**3. 难点解析**
+如果有特殊语法现象（倒装、省略、虚拟等），在此说明
+
+**4. 中文释义**
+给出通顺自然的中文翻译
+
+注意：用简洁的语言解释，不要写成长篇大论。`,
+
+  /** 背景知识：深度解读 */
+  background: (text: string) => `请帮助我理解以下这段文字：
+
+「${text}」
+
+请从以下角度解读：
+
+**1. 表面意思**
+这段话在说什么？
+
+**2. 隐含信息**
+- 涉及什么历史背景、文化典故或专业知识？
+- 作者想表达什么深层含义？
+- 与上下文有什么关联？
+
+**3. 延伸阅读**（可选）
+如果涉及重要概念，简要补充说明
+
+保持简洁，每个部分几句话即可。`,
+
+  /** 词汇解析：深度学习 */
+  vocabulary: (text: string) => `请解释以下词汇/表达：
+
+「${text}」
+
+请包括：
+- 基本含义（中文）
+- 在这个语境中的具体意思
+- 常见用法或搭配
+- 近义词辨析（如果有）`,
+
+  /** 仅引用：带入上下文 */
+  plain: (text: string) => text,
 };
 
-/**
- * Make a single translation API call
- */
-const makeTranslationRequest = async (
-  text: string,
-  apiUrl: string,
-  apiKey: string
-): Promise<string> => {
-  const endpoint = normalizeApiUrl(apiUrl);
-  const isAbsolute = /^https?:\/\//i.test(endpoint);
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(isAbsolute ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text },
-      ] as ChatMessage[],
-      temperature: TEMPERATURE,
-      stream: false,
-    }),
-  });
-
-  if (!response.ok) {
-    const rawText = await response.text().catch(() => '');
-    const isRetryable = isRetryableError(response.status);
-    throw new TranslationError(
-      `API error: ${response.status}${rawText ? ` - ${rawText}` : ''}`,
-      response.status,
-      isRetryable
-    );
-  }
-
-  const data: ChatResponse = await response.json();
-  const content = data.choices[0]?.message?.content;
-
-  if (!content) {
-    throw new TranslationError('Empty response from API', undefined, false);
-  }
-
-  return content;
-};
+export type QuickPromptMode = 'grammar' | 'background' | 'plain';
 
 /**
- * Translate text with automatic retry on transient failures
- * @param text - Text to translate
- * @param apiUrl - API endpoint URL (empty string uses default/proxy)
- * @param apiKey - API key for authentication
+ * 获取 Quick Prompt 的完整文本
  */
-export const translateText = async (
-  text: string,
-  apiUrl: string,
-  apiKey: string
-): Promise<string> => {
-  const endpoint = normalizeApiUrl(apiUrl);
-  const isAbsolute = /^https?:\/\//i.test(endpoint);
-  
-  if (isAbsolute && !apiKey) {
-    throw new TranslationError('API Key is required', undefined, false);
+export const getQuickPrompt = (mode: QuickPromptMode, selectedText: string): string => {
+  switch (mode) {
+    case 'grammar':
+      return QUICK_PROMPTS.grammar(selectedText);
+    case 'background':
+      return QUICK_PROMPTS.background(selectedText);
+    case 'plain':
+      return QUICK_PROMPTS.plain(selectedText);
+    default:
+      return selectedText;
   }
-
-  // Truncate extremely long text to avoid context limit errors
-  const safeText = text.length > MAX_TEXT_LENGTH 
-    ? text.slice(0, MAX_TEXT_LENGTH) 
-    : text;
-
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      return await makeTranslationRequest(safeText, apiUrl, apiKey);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      const isRetryable =
-        error instanceof TranslationError && error.isRetryable;
-      const hasRetriesLeft = attempt < MAX_RETRIES;
-
-      if (isRetryable && hasRetriesLeft) {
-        const waitTime = RETRY_DELAY_MS * Math.pow(2, attempt); // Exponential backoff
-        console.warn(
-          `Translation attempt ${attempt + 1} failed, retrying in ${waitTime}ms...`
-        );
-        await delay(waitTime);
-        continue;
-      }
-
-      // Non-retryable error or out of retries
-      break;
-    }
-  }
-
-  console.error('Translation failed after retries:', lastError);
-  throw lastError ?? new TranslationError('Unknown translation error');
 };
+
+// ============================================
+// 导出类型
+// ============================================
 
 /**
  * Chat message type for conversation
@@ -204,37 +203,35 @@ export interface ChatMessageType {
   content: string;
 }
 
-const CHAT_SYSTEM_PROMPT = `你是一位博学的阅读辅助助手，帮助用户深入理解英文书籍中遇到的疑惑。
+// ============================================
+// API 函数
+// ============================================
 
-## 核心职责
+/**
+ * Translate text with automatic retry on transient failures
+ */
+export const translateText = async (
+  text: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<string> => {
+  const client = createLLMClient({
+    ...DEFAULT_CONFIG,
+    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+  }, apiKey);
 
-1. **名词解释**：解释专有名词、术语、人名、地名、机构名、概念等
-   - 提供准确的中文译名和原文
-   - 说明其含义、来源、重要性
-   
-2. **句法分析**：帮助理解复杂的英文句式
-   - 分析长难句结构
-   - 解释特殊语法、习语、俚语
-   - 说明修辞手法
-   
-3. **背景知识**：提供理解文本所需的上下文
-   - 历史背景、文化背景
-   - 相关事件、人物关系
-   - 学科知识、行业常识
-
-## 回答风格
-
-- **准确**：确保信息正确，不确定时说明
-- **简洁**：直击要点，避免冗长废话
-- **易懂**：用通俗的语言解释复杂概念
-- **有深度**：适当展开，帮助真正理解而非表面了解
-
-## 格式规范
-
-- 引号使用直角引号「」『』
-- 中英混排加空格（如：HTTP 协议、第 3 章）
-- 专有名词格式：中文译名（English Term）
-- 适当使用列表、分段提高可读性`;
+  try {
+    return await client.chatCompletion(
+      [
+        { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
+        { role: 'user', content: text },
+      ],
+      { temperature: DEFAULT_CONFIG.temperature }
+    );
+  } catch (error) {
+    throw convertError(error);
+  }
+};
 
 /**
  * Send a chat message and get a response
@@ -245,73 +242,34 @@ export const sendChatMessage = async (
   apiKey: string,
   context?: string
 ): Promise<string> => {
-  const endpoint = normalizeApiUrl(apiUrl);
-  const isAbsolute = /^https?:\/\//i.test(endpoint);
+  const client = createLLMClient({
+    ...DEFAULT_CONFIG,
+    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+  }, apiKey);
 
-  if (isAbsolute && !apiKey) {
-    throw new TranslationError('API Key is required', undefined, false);
-  }
-
-  // Build messages array with system prompt and optional context
-  const systemContent = context 
-    ? `${CHAT_SYSTEM_PROMPT}\n\n当前引用的文本：\n「${context}」`
+  const systemContent = context
+    ? `${CHAT_SYSTEM_PROMPT}\n\n当前用户引用的文本：\n「${context}」`
     : CHAT_SYSTEM_PROMPT;
 
   const apiMessages: ChatMessage[] = [
     { role: 'system', content: systemContent },
-    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ];
 
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(isAbsolute ? { Authorization: `Bearer ${apiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: apiMessages,
-          temperature: 0.5,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        const rawText = await response.text().catch(() => '');
-        const isRetryable = isRetryableError(response.status);
-        throw new TranslationError(
-          `API error: ${response.status}${rawText ? ` - ${rawText}` : ''}`,
-          response.status,
-          isRetryable
-        );
-      }
-
-      const data: ChatResponse = await response.json();
-      const content = data.choices[0]?.message?.content;
-
-      if (!content) {
-        throw new TranslationError('Empty response from API', undefined, false);
-      }
-
-      return content;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      const isRetryable = error instanceof TranslationError && error.isRetryable;
-      const hasRetriesLeft = attempt < MAX_RETRIES;
-
-      if (isRetryable && hasRetriesLeft) {
-        const waitTime = RETRY_DELAY_MS * Math.pow(2, attempt);
-        await delay(waitTime);
-        continue;
-      }
-      break;
-    }
+  try {
+    return await client.chatCompletion(apiMessages, { temperature: 0.5 });
+  } catch (error) {
+    throw convertError(error);
   }
-
-  throw lastError ?? new TranslationError('Unknown chat error');
 };
+
+// Convert unknown error to TranslationError
+function convertError(error: unknown): TranslationError {
+  if (error instanceof TranslationError) {
+    return error;
+  }
+  if (error instanceof Error) {
+    return new TranslationError(error.message);
+  }
+  return new TranslationError('Unknown error');
+}
