@@ -116,11 +116,7 @@ const CHAT_SYSTEM_PROMPT = `你是一位博学的私人阅读导师，正在陪�
 
 export const QUICK_PROMPTS = {
   /** 语法分析：结构化拆解句子 */
-  grammar: (text: string) => `请分析以下英文句子的语法结构：
-
-「${text}」
-
-请按以下格式回答：
+  grammar: (_text: string) => `请分析以上引用英文句子的语法结构：
 
 **1. 主干提取**
 找出主谓宾/主系表核心结构
@@ -139,11 +135,7 @@ export const QUICK_PROMPTS = {
 注意：用简洁的语言解释，不要写成长篇大论。`,
 
   /** 背景知识：深度解读 */
-  background: (text: string) => `请帮助我理解以下这段文字：
-
-「${text}」
-
-请从以下角度解读：
+  background: (_text: string) => `请解读以上引用文字：
 
 **1. 表面意思**
 这段话在说什么？
@@ -159,9 +151,7 @@ export const QUICK_PROMPTS = {
 保持简洁，每个部分几句话即可。`,
 
   /** 词汇解析：深度学习 */
-  vocabulary: (text: string) => `请解释以下词汇/表达：
-
-「${text}」
+  vocabulary: (_text: string) => `请解释以上引用的词汇/表达：
 
 请包括：
 - 基本含义（中文）

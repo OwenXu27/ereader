@@ -4,10 +4,13 @@ import { EpubReader } from './components/Reader/EpubReader';
 import { Library } from './components/Library/Library';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { getBookFile, getBooks } from './services/db';
+import { useTheme } from './hooks/useTheme';
 
 function App() {
-  const { currentBook, settings, setBooks } = useBookStore();
+  const { currentBook, setBooks } = useBookStore();
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
+  const theme = useTheme();
+  
   // Track book ID to only reload when switching books, not on progress updates
   const currentBookId = currentBook?.id ?? null;
   const prevBookIdRef = useRef<string | null>(null);
@@ -16,14 +19,6 @@ function App() {
   useEffect(() => {
     getBooks().then(books => setBooks(books));
   }, [setBooks]);
-
-  useEffect(() => {
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [settings.theme]);
 
   // Only reload book file when book ID changes (not on progress updates)
   useEffect(() => {
@@ -43,7 +38,7 @@ function App() {
   }, [currentBookId]);
 
   return (
-    <div className="h-screen w-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex overflow-hidden">
+    <div className={`h-screen w-screen bg-theme-base text-theme-primary flex overflow-hidden font-reading ${theme.selection}`}>
       {bookData && currentBook ? (
         <EpubReader 
           bookData={bookData} 

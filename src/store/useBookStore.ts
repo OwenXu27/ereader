@@ -15,16 +15,22 @@ interface Settings {
 // Translation cache: bookId -> { textHash -> translation }
 type TranslationCache = Record<string, Record<string, string>>;
 
+// Panel state type
+type PanelState = 'none' | 'toc' | 'chat';
+
 interface ReaderState {
   currentBook: Book | null;
   settings: Settings;
   books: Book[];
   isSettingsOpen: boolean;
+  activePanel: PanelState;
   translations: TranslationCache;
   setCurrentBook: (book: Book | null) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   setBooks: (books: Book[]) => void;
   setSettingsOpen: (isOpen: boolean) => void;
+  openPanel: (panel: 'toc' | 'chat') => void;
+  closePanel: () => void;
   updateBookProgress: (id: string, cfi: string, progress: number) => void;
   saveTranslation: (bookId: string, textHash: string, translation: string) => void;
   getTranslation: (bookId: string, textHash: string) => string | undefined;
@@ -47,7 +53,7 @@ export const useBookStore = create<ReaderState>()(
       currentBook: null,
       settings: {
         theme: 'light',
-        fontSize: 16,
+        fontSize: 17,
         fontFamily: 'serif',
         translationEnabled: false,
         apiUrl: '',
@@ -56,12 +62,16 @@ export const useBookStore = create<ReaderState>()(
       },
       books: [],
       isSettingsOpen: false,
+      activePanel: 'none',
       translations: {},
       setCurrentBook: (book) => set({ currentBook: book }),
       updateSettings: (newSettings) =>
         set((state) => ({ settings: { ...state.settings, ...newSettings } })),
       setBooks: (books) => set({ books }),
       setSettingsOpen: (isOpen) => set({ isSettingsOpen: isOpen }),
+      // Panel management with mutual exclusivity
+      openPanel: (panel) => set({ activePanel: panel }),
+      closePanel: () => set({ activePanel: 'none' }),
       updateBookProgress: (id, cfi, progress) =>
         set((state) => ({
           // Update in books array
@@ -99,9 +109,9 @@ export const useBookStore = create<ReaderState>()(
           translationEnabled: state.settings.translationEnabled,
           allowScriptedContent: state.settings.allowScriptedContent,
           apiUrl: state.settings.apiUrl,
-          apiKey: state.settings.apiKey, // Saved locally for convenience
+          apiKey: state.settings.apiKey,
         },
-        translations: state.translations, // Persist translations
+        translations: state.translations,
       }),
     }
   )

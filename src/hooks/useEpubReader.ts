@@ -144,31 +144,35 @@ export const useEpubReader = ({
 
       // Inject base styles
       const style = doc.createElement('style');
+      const currentFontSize = useBookStore.getState().settings.fontSize;
       style.innerHTML = `
         body {
-          font-family: 'Merriweather', 'Georgia', serif !important;
-          line-height: 1.6 !important;
+          font-family: 'Source Serif 4', 'Merriweather', 'Georgia', serif !important;
+          line-height: 1.75 !important;
+          font-size: ${currentFontSize}px !important;
         }
         ::selection {
-          background-color: rgba(208, 170, 33, 0.6) !important;
+          background-color: ${currentTheme.selectionBg} !important;
           color: inherit !important;
         }
         ::-moz-selection {
-          background-color: rgba(208, 170, 33, 0.6) !important;
+          background-color: ${currentTheme.selectionBg} !important;
           color: inherit !important;
         }
         .translation-block {
-          font-family: 'Inter', sans-serif;
+          font-family: 'Inter', 'SF Pro Display', sans-serif;
           font-size: 0.9em;
           margin-top: 0.5em;
           margin-bottom: 1em;
-          padding: 0.5em;
+          padding: 0.75em 1em;
           line-height: 1.6;
-          border-left-width: 2px;
-          border-left-style: solid;
+          border-left: 2px solid ${currentTheme.accentWarm};
+          background-color: ${currentThemeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'};
+          border-radius: 0 4px 4px 0;
         }
         p {
-          margin-bottom: 1em !important;
+          margin-bottom: 1.25em !important;
+          text-align: justify;
         }
         p.has-translation {
           cursor: default;
@@ -181,13 +185,11 @@ export const useEpubReader = ({
       themeStyle.id = 'reader-theme-style';
       themeStyle.textContent = `
         body {
-          color: ${currentTheme.color} !important;
-          background-color: ${currentTheme.background} !important;
+          color: ${currentTheme.textPrimary} !important;
+          background-color: ${currentTheme.bgBase} !important;
         }
         .translation-block {
-          color: ${currentTheme.translationColor} !important;
-          border-left-color: ${currentTheme.borderColor} !important;
-          background-color: ${currentTheme.translationBg} !important;
+          color: ${currentTheme.textSecondary} !important;
         }
       `;
       head.appendChild(themeStyle);
@@ -222,7 +224,7 @@ export const useEpubReader = ({
           p.setAttribute('data-translated', 'loading');
           const loader = doc.createElement('div');
           loader.className = 'translation-block';
-          loader.textContent = 'Translating...';
+          loader.textContent = '翻译中...';
           p.appendChild(loader);
 
           try {
@@ -235,7 +237,7 @@ export const useEpubReader = ({
               useBookStore.getState().saveTranslation(bookId, textHash, translated);
             }
           } catch (err) {
-            const errorMessage = err instanceof TranslationError ? err.message : 'Translation failed';
+            const errorMessage = err instanceof TranslationError ? err.message : '翻译失败';
             loader.textContent = errorMessage;
             p.removeAttribute('data-translated');
           }
@@ -285,6 +287,8 @@ export const useEpubReader = ({
     });
 
     rendition.display(initialCfi || undefined).then(() => {
+      // Apply initial font size immediately after display
+      rendition.themes.fontSize(`${settings.fontSize}px`);
       setIsReady(true);
     });
 
@@ -396,8 +400,6 @@ export const useEpubReader = ({
     const rendition = renditionRef.current;
     const currentTheme = THEME_COLORS[settings.theme as ThemeType];
 
-    rendition.themes.fontSize(`${settings.fontSize}px`);
-
     try {
       const contents = rendition.getContents() as unknown as Array<{ document: Document }>;
       contents.forEach((content) => {
@@ -410,20 +412,28 @@ export const useEpubReader = ({
           style.id = 'reader-theme-style';
           style.textContent = `
             body {
-              color: ${currentTheme.color} !important;
-              background-color: ${currentTheme.background} !important;
+              color: ${currentTheme.textPrimary} !important;
+              background-color: ${currentTheme.bgBase} !important;
+              font-size: ${settings.fontSize}px !important;
+            }
+            ::selection {
+              background-color: ${currentTheme.selectionBg} !important;
+            }
+            ::-moz-selection {
+              background-color: ${currentTheme.selectionBg} !important;
             }
             .translation-block {
-              color: ${currentTheme.translationColor} !important;
-              border-left-color: ${currentTheme.borderColor} !important;
-              background-color: ${currentTheme.translationBg} !important;
+              color: ${currentTheme.textSecondary} !important;
+              border-left-color: ${currentTheme.accentWarm} !important;
+              background-color: ${settings.theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'} !important;
             }
           `;
           doc.head.appendChild(style);
 
           if (doc.body) {
-            doc.body.style.setProperty('color', currentTheme.color, 'important');
-            doc.body.style.setProperty('background-color', currentTheme.background, 'important');
+            doc.body.style.setProperty('color', currentTheme.textPrimary, 'important');
+            doc.body.style.setProperty('background-color', currentTheme.bgBase, 'important');
+            doc.body.style.setProperty('font-size', `${settings.fontSize}px`, 'important');
           }
         }
       });

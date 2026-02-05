@@ -1,37 +1,69 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useBookStore } from '../store/useBookStore';
 
 export type ThemeType = 'light' | 'dark' | 'sepia';
 
 export interface ThemeColors {
-  color: string;
-  background: string;
-  translationColor: string;
-  borderColor: string;
-  translationBg: string;
+  // Background
+  bgBase: string;
+  bgSurface: string;
+  bgElevated: string;
+  bgInput: string;
+  
+  // Text
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  
+  // Border
+  borderPrimary: string;
+  borderActive: string;
+  
+  // Special
+  accentWarm: string;
+  selectionBg: string;
 }
 
+// Colors synced with index.css CSS variables
 export const THEME_COLORS: Record<ThemeType, ThemeColors> = {
   light: {
-    color: '#333333',
-    background: '#F9F7F1',
-    translationColor: '#52525b',
-    borderColor: '#e4e4e7',
-    translationBg: 'rgba(0,0,0,0.02)',
-  },
-  dark: {
-    color: '#e4e4e7',
-    background: '#18181b',
-    translationColor: '#a1a1aa',
-    borderColor: '#3f3f46',
-    translationBg: 'rgba(255,255,255,0.05)',
+    bgBase: '#FFFCF8',
+    bgSurface: '#FFFDF9',
+    bgElevated: '#F8F6F0',
+    bgInput: '#FFFFFF',
+    textPrimary: '#2D2A26',
+    textSecondary: '#5C5852',
+    textMuted: '#9A958C',
+    borderPrimary: 'rgba(45, 42, 38, 0.08)',
+    borderActive: 'rgba(45, 42, 38, 0.2)',
+    accentWarm: '#9B7B5C',
+    selectionBg: 'rgba(155, 123, 92, 0.15)',
   },
   sepia: {
-    color: '#5b4636',
-    background: '#f4ecd8',
-    translationColor: '#8b6b4e',
-    borderColor: '#e3d5b8',
-    translationBg: 'rgba(91,70,54,0.05)',
+    bgBase: '#F9F3E8',
+    bgSurface: '#F5ECD8',
+    bgElevated: '#EDE4D0',
+    bgInput: '#FFFDF7',
+    textPrimary: '#4A3F35',
+    textSecondary: '#7A6B5A',
+    textMuted: '#A89B8C',
+    borderPrimary: 'rgba(74, 63, 53, 0.1)',
+    borderActive: 'rgba(74, 63, 53, 0.25)',
+    accentWarm: '#8B6F4E',
+    selectionBg: 'rgba(139, 111, 78, 0.2)',
+  },
+  dark: {
+    bgBase: '#1C1A17',
+    bgSurface: '#252320',
+    bgElevated: '#2E2C28',
+    bgInput: '#161412',
+    textPrimary: '#E8E4DF',
+    textSecondary: '#B8B2A8',
+    textMuted: '#7A746C',
+    borderPrimary: 'rgba(232, 228, 223, 0.08)',
+    borderActive: 'rgba(232, 228, 223, 0.2)',
+    accentWarm: '#C9B896',
+    selectionBg: 'rgba(201, 184, 150, 0.2)',
   },
 };
 
@@ -40,39 +72,61 @@ export const useTheme = () => {
   const theme = settings.theme as ThemeType;
   const colors = THEME_COLORS[theme];
 
+  // Apply data-theme attribute to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const classes = useMemo(() => {
     const isDark = theme === 'dark';
     const isSepia = theme === 'sepia';
     const isLight = theme === 'light';
 
     return {
-      // Base
+      // Meta
       theme,
       isDark,
       isSepia,
       isLight,
       colors,
 
-      // Background classes
-      bg: isDark ? 'bg-[#18181b]' : isSepia ? 'bg-[#f4ecd8]' : 'bg-[#F9F7F1]',
-      bgInput: isDark ? 'bg-zinc-900' : isSepia ? 'bg-[#fbf5e6]' : 'bg-white',
+      // Background - using CSS variables
+      bg: 'bg-theme-base',
+      bgSurface: 'bg-theme-surface',
+      bgElevated: 'bg-theme-elevated',
+      bgInput: 'bg-theme-input',
 
-      // Text classes
-      text: isDark ? 'text-zinc-100' : isSepia ? 'text-[#5b4636]' : 'text-[#333333]',
-      textMuted: isDark ? 'text-zinc-400' : isSepia ? 'text-[#6b4e35]' : 'text-zinc-500',
-      textUser: isDark ? 'text-zinc-300' : isSepia ? 'text-[#6b4e35]' : 'text-zinc-600',
-      textAssistant: isDark ? 'text-zinc-100' : isSepia ? 'text-[#4a3a2a]' : 'text-zinc-900',
+      // Text - using CSS variables
+      text: 'text-theme-primary',
+      textSecondary: 'text-theme-secondary',
+      textMuted: 'text-theme-muted',
+      textUser: 'text-theme-secondary',
+      textAssistant: 'text-theme-primary',
 
-      // Border classes
-      border: isDark ? 'border-zinc-800' : isSepia ? 'border-[#e3d5b8]' : 'border-zinc-200',
+      // Border - using CSS variables
+      border: 'border-theme-primary',
+      borderActive: 'border-theme-active',
 
-      // Interactive states
-      hover: isDark ? 'hover:bg-zinc-800' : isSepia ? 'hover:bg-[#f1e3c4]' : 'hover:bg-zinc-100',
+      // Interactive states - theme specific with transitions
+      hover: isDark 
+        ? 'hover:bg-white/5 transition-colors duration-fast' 
+        : isSepia 
+          ? 'hover:bg-warm-100/50 transition-colors duration-fast' 
+          : 'hover:bg-ink-50/50 transition-colors duration-fast',
 
       // Toolbar specific
-      toolbarBg: isDark ? 'bg-[#18181b]' : isSepia ? 'bg-[#f4ecd8]' : 'bg-[#F9F7F1]',
-      toolbarText: isDark ? 'text-zinc-100' : isSepia ? 'text-[#5b4636]' : 'text-[#333333]',
-      toolbarButtonText: isDark ? 'text-zinc-300' : isSepia ? 'text-[#6b4e35]' : 'text-zinc-600',
+      toolbarBg: 'bg-theme-base/95 backdrop-blur-sm',
+      toolbarText: 'text-theme-primary',
+      toolbarButtonText: 'text-theme-secondary',
+
+      // Input specific
+      inputBg: 'bg-theme-input',
+      inputBorder: 'border-theme-primary focus:border-theme-active',
+      inputText: 'text-theme-primary placeholder:text-theme-muted',
+
+      // Special
+      accent: 'text-warm-500',
+      selection: 'selection:bg-warm-500/20',
     };
   }, [theme, colors]);
 

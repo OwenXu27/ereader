@@ -1,9 +1,17 @@
 import React from 'react';
 import { useBookStore } from '../../store/useBookStore';
 import type { ThemeType } from '../../hooks/useTheme';
-import { X, Globe, ShieldAlert } from 'lucide-react';
-import clsx from 'clsx';
+import { X, Globe, ShieldAlert, Moon, Sun, Coffee } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { AnimatePresence, motion } from 'framer-motion';
+
+// Utility for cleaner tailwind classes
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const iconSize = 16;
 
 export const SettingsPanel: React.FC = () => {
   const { settings, updateSettings, isSettingsOpen, setSettingsOpen } = useBookStore();
@@ -12,138 +20,246 @@ export const SettingsPanel: React.FC = () => {
     <AnimatePresence>
       {isSettingsOpen && (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/30 backdrop-blur-sm"
           onClick={() => setSettingsOpen(false)}
         >
-          <div 
-            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl p-6 w-full max-w-md border border-zinc-200 dark:border-zinc-800"
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className={cn(
+              "bg-theme-surface rounded-xl shadow-xl w-full max-w-md",
+              "overflow-hidden"
+            )}
+            style={{ border: '0.5px solid var(--border-primary)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold font-serif">Settings</h2>
-              <button onClick={() => setSettingsOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full">
-                <X size={20} />
+            {/* Header - Unified style with Chat Sidebar */}
+            <div className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
+              <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">设置</h2>
+              <button 
+                onClick={() => setSettingsOpen(false)} 
+                className={cn(
+                  "w-8 h-8 flex items-center justify-center rounded-md",
+                  "text-theme-secondary hover:text-theme-primary hover:bg-theme-elevated",
+                  "transition-all duration-fast ease-out-custom active:scale-95"
+                )}
+              >
+                <X size={iconSize} />
               </button>
             </div>
 
-              <div className="space-y-6">
-                {/* Theme */}
-                <div>
-                  <label className="text-sm font-medium text-zinc-500 mb-2 block">Theme</label>
-                  <div className="flex gap-2">
-                    {['light', 'dark', 'sepia'].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => updateSettings({ theme: t as ThemeType })}
-                        className={clsx(
-                          "flex-1 py-2 px-4 rounded-lg border text-sm capitalize transition",
-                          settings.theme === t 
-                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                            : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
+            <div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              {/* Theme */}
+              <section>
+                <label className="text-[11px] uppercase tracking-[0.05em] font-medium text-theme-muted mb-3 block">
+                  主题
+                </label>
+                <div className="flex gap-2">
+                  <ThemeButton
+                    theme="light"
+                    currentTheme={settings.theme}
+                    onClick={() => updateSettings({ theme: 'light' })}
+                    icon={<Sun size={14} />}
+                    label="明亮"
+                  />
+                  <ThemeButton
+                    theme="sepia"
+                    currentTheme={settings.theme}
+                    onClick={() => updateSettings({ theme: 'sepia' })}
+                    icon={<Coffee size={14} />}
+                    label="护眼"
+                  />
+                  <ThemeButton
+                    theme="dark"
+                    currentTheme={settings.theme}
+                    onClick={() => updateSettings({ theme: 'dark' })}
+                    icon={<Moon size={14} />}
+                    label="暗黑"
+                  />
                 </div>
+              </section>
 
-                {/* Font Size */}
-                <div>
-                  <label className="text-sm font-medium text-zinc-500 mb-2 block">Font Size</label>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs">A</span>
-                    <input 
-                      type="range" 
-                      min="12" 
-                      max="32" 
-                      step="1"
-                      value={settings.fontSize}
-                      onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value) })}
-                      className="flex-1 accent-zinc-900 dark:accent-zinc-100"
-                    />
-                    <span className="text-xl">A</span>
-                  </div>
+              {/* Font Size */}
+              <section>
+                <label className="text-[11px] uppercase tracking-[0.05em] font-medium text-theme-muted mb-3 block">
+                  字号
+                </label>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-theme-secondary font-ui">A</span>
+                  <input 
+                    type="range" 
+                    min="12" 
+                    max="32" 
+                    step="1"
+                    value={settings.fontSize}
+                    onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value) })}
+                    className="flex-1 accent-warm-500 h-1 bg-theme-elevated rounded-full appearance-none cursor-pointer"
+                    style={{
+                      backgroundImage: `linear-gradient(to right, var(--accent-warm, #8B6F4E) 0%, var(--accent-warm, #8B6F4E) ${(settings.fontSize - 12) / (32 - 12) * 100}%, var(--bg-elevated, #F5ECD8) ${(settings.fontSize - 12) / (32 - 12) * 100}%, var(--bg-elevated, #F5ECD8) 100%)`
+                    }}
+                  />
+                  <span className="text-lg text-theme-secondary font-ui">A</span>
                 </div>
+                <div className="mt-2 text-center text-sm text-theme-muted">
+                  {settings.fontSize}px
+                </div>
+              </section>
 
-                {/* Translation Settings */}
-                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Globe size={18} />
-                      <span className="font-medium">Translation</span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+              {/* AI Settings */}
+              <section className="pt-4" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-theme-primary">
+                    <Globe size={iconSize} />
+                    <span className="font-medium text-sm">AI 助手</span>
+                  </div>
+                  <Switch
+                    checked={settings.translationEnabled}
+                    onChange={(checked) => updateSettings({ translationEnabled: checked })}
+                  />
+                </div>
+                
+                {settings.translationEnabled && (
+                  <div className="space-y-4 pl-6">
+                    <div className="space-y-2">
+                      <label className="text-xs text-theme-secondary">
+                        API 地址 <span className="text-red-500">*</span>
+                      </label>
                       <input 
-                        type="checkbox" 
-                        checked={settings.translationEnabled}
-                        onChange={(e) => updateSettings({ translationEnabled: e.target.checked })}
-                        className="sr-only peer"
+                        type="text"
+                        value={settings.apiUrl}
+                        onChange={(e) => updateSettings({ apiUrl: e.target.value })}
+                        placeholder="http://localhost:5177/api/chat/completions"
+                        className={cn(
+                          "w-full px-3 py-2 text-sm rounded-lg",
+                          "bg-theme-input",
+                          "text-theme-primary placeholder:text-theme-muted",
+                          "focus:outline-none",
+                          "transition-all duration-fast"
+                        )}
+                        style={{ border: '0.5px solid var(--border-primary)' }}
                       />
-                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  
-                  {settings.translationEnabled && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs text-zinc-500">API URL <span className="text-red-500">*</span></label>
-                        <input 
-                          type="text"
-                          value={settings.apiUrl}
-                          onChange={(e) => updateSettings({ apiUrl: e.target.value })}
-                          placeholder="https://api.moonshot.cn/v1"
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p className="text-[10px] text-zinc-400">
-                          Moonshot API: https://api.moonshot.cn/v1
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs text-zinc-500">API Key <span className="text-red-500">*</span></label>
-                        <input 
-                          type="password"
-                          value={settings.apiKey}
-                          onChange={(e) => updateSettings({ apiKey: e.target.value })}
-                          placeholder="sk-..."
-                          className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p className="text-[10px] text-zinc-400">
-                          从 <a href="https://platform.moonshot.cn/" target="_blank" rel="noopener" className="text-blue-500 hover:underline">platform.moonshot.cn</a> 获取，保存在浏览器本地
-                        </p>
-                      </div>
+                      <p className="text-[10px] text-theme-muted">
+                        默认使用本地代理，也可直接填写 Moonshot API
+                      </p>
                     </div>
-                  )}
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-theme-secondary">
+                        API 密钥 <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="password"
+                        value={settings.apiKey}
+                        onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                        placeholder="sk-..."
+                        className={cn(
+                          "w-full px-3 py-2 text-sm rounded-lg",
+                          "bg-theme-input",
+                          "text-theme-primary placeholder:text-theme-muted",
+                          "focus:outline-none",
+                          "transition-all duration-fast"
+                        )}
+                        style={{ border: '0.5px solid var(--border-primary)' }}
+                      />
+                      <p className="text-[10px] text-theme-muted">
+                        从 <a href="https://platform.moonshot.cn/" target="_blank" rel="noopener" className="text-warm-500 hover:underline">platform.moonshot.cn</a> 获取
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </section>
 
-                {/* Scripted EPUB (Sandbox) */}
-                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert size={18} />
-                      <span className="font-medium">Allow EPUB Scripts</span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.allowScriptedContent}
-                        onChange={(e) => updateSettings({ allowScriptedContent: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                    </label>
+              {/* Security Settings */}
+              <section className="pt-4" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-theme-primary">
+                    <ShieldAlert size={iconSize} />
+                    <span className="font-medium text-sm">允许 EPUB 脚本</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400 leading-relaxed">
-                    Some EPUBs include scripts and will show a sandbox warning or render blank unless scripts are allowed. Turning this on is less safe for untrusted books.
-                  </p>
+                  <Switch
+                    checked={settings.allowScriptedContent}
+                    onChange={(checked) => updateSettings({ allowScriptedContent: checked })}
+                    variant="warning"
+                  />
                 </div>
-              </div>
-          </div>
+                <p className="text-[11px] text-theme-muted leading-relaxed pl-6">
+                  部分 EPUB 包含脚本，禁用时会显示沙盒警告或空白页。开启后可能存在安全风险，请谨慎处理来源不明的书籍。
+                </p>
+              </section>
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
+
+// Theme Button Component
+interface ThemeButtonProps {
+  theme: ThemeType;
+  currentTheme: ThemeType;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const ThemeButton = ({ theme, currentTheme, onClick, icon, label }: ThemeButtonProps) => {
+  const isActive = currentTheme === theme;
+  
+  const themeStyles = {
+    light: 'bg-paper-50 text-ink-700 border-ink-200',
+    sepia: 'bg-paper-100 text-warm-600 border-warm-300',
+    dark: 'bg-ink-900 text-ink-100 border-ink-700',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex-1 py-2.5 px-3 rounded-lg text-sm transition-all duration-fast ease-out-custom",
+        "flex items-center justify-center gap-2",
+        isActive 
+          ? cn("font-medium", themeStyles[theme])
+          : "text-theme-secondary hover:bg-theme-elevated hover:text-theme-primary"
+      )}
+      style={{ border: isActive ? '0.5px solid var(--warm-500, #8B6F4E)' : '0.5px solid var(--border-primary)' }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+};
+
+// Switch Component
+interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  variant?: 'default' | 'warning';
+}
+
+const Switch = ({ checked, onChange, variant = 'default' }: SwitchProps) => (
+  <label className="relative inline-flex items-center cursor-pointer">
+    <input 
+      type="checkbox" 
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="sr-only peer"
+    />
+    <div className={cn(
+      "w-10 h-5 rounded-full transition-all duration-fast",
+      "bg-theme-elevated peer-checked:bg-warm-500",
+      "relative after:content-[''] after:absolute after:top-[2px] after:left-[2px]",
+      "after:bg-white after:rounded-full after:h-4 after:w-4",
+      "after:transition-all after:duration-fast",
+      "peer-checked:after:translate-x-5",
+      variant === 'warning' && checked && "peer-checked:bg-amber-500"
+    )} />
+  </label>
+);
+
+export default SettingsPanel;

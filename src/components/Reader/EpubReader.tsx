@@ -5,9 +5,14 @@ import { useTheme } from '../../hooks/useTheme';
 import { useEpubReader } from '../../hooks/useEpubReader';
 import { useReaderKeyboard } from '../../hooks/useReaderKeyboard';
 import { Settings, ArrowLeft, List, X, MessageCircle } from 'lucide-react';
-
-import clsx from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { ChatSidebar } from './ChatSidebar';
+
+// Utility for cleaner tailwind classes
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface EpubReaderProps {
   bookData: ArrayBuffer;
@@ -16,13 +21,13 @@ interface EpubReaderProps {
 }
 
 export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) => {
-  const [showControls, setShowControls] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [quickPromptMode, setQuickPromptMode] = useState<import('../../services/llm').QuickPromptMode | null>(null);
   
-  const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideHeaderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setSettingsOpen } = useBookStore();
   const theme = useTheme();
 
@@ -71,192 +76,268 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     return () => clearTimeout(timer);
   }, [showChat, isReady, renditionRef]);
 
-  // Cleanup controls timer
+  // Header hover behavior - show on trigger zone enter
+  const handleHeaderTriggerEnter = useCallback(() => {
+    setShowHeader(true);
+    if (hideHeaderTimer.current) {
+      clearTimeout(hideHeaderTimer.current);
+    }
+    hideHeaderTimer.current = setTimeout(() => {
+      setShowHeader(false);
+    }, 3000);
+  }, []);
+
+  // Keep header visible when mouse is on header
+  const handleHeaderMouseEnter = useCallback(() => {
+    if (hideHeaderTimer.current) {
+      clearTimeout(hideHeaderTimer.current);
+    }
+  }, []);
+
+  // Hide after 3s when mouse leaves header
+  const handleHeaderMouseLeave = useCallback(() => {
+    hideHeaderTimer.current = setTimeout(() => {
+      setShowHeader(false);
+    }, 3000);
+  }, []);
+
+  // Cleanup timer
   useEffect(() => {
     return () => {
-      if (hideControlsTimer.current) {
-        clearTimeout(hideControlsTimer.current);
+      if (hideHeaderTimer.current) {
+        clearTimeout(hideHeaderTimer.current);
       }
     };
   }, []);
 
-  const handleEdgeHover = useCallback(() => {
-    setShowControls(true);
-    if (hideControlsTimer.current) {
-      clearTimeout(hideControlsTimer.current);
+  // Toggle TOC - click again to close
+  const handleToggleToc = useCallback(() => {
+    if (showToc) {
+      setShowToc(false);
+    } else {
+      setShowChat(false);
+      setShowToc(true);
     }
-    hideControlsTimer.current = setTimeout(() => {
-      setShowControls(false);
-    }, 3000);
-  }, []);
+  }, [showToc]);
 
-  const handleContainerClick = useCallback(() => {
-    containerRef.current?.focus();
-  }, [containerRef]);
+  // Toggle Chat - click again to close
+  const handleToggleChat = useCallback(() => {
+    if (showChat) {
+      setShowChat(false);
+    } else {
+      setShowToc(false);
+      setShowChat(true);
+    }
+  }, [showChat]);
+
+  // Calculate content margins based on panel state
+  const getContentLayout = () => {
+    if (showToc) {
+      return { 
+        marginLeft: '24%', 
+        marginRight: '0%',
+        headerLeft: '24%',
+        headerRight: '24%'
+      };
+    }
+    if (showChat) {
+      return { 
+        marginLeft: '0%', 
+        marginRight: '24%',
+        headerLeft: '0%',
+        headerRight: '24%'
+      };
+    }
+    return { 
+      marginLeft: '12%', 
+      marginRight: '12%',
+      headerLeft: '12%',
+      headerRight: '12%'
+    };
+  };
+
+  const layout = getContentLayout();
 
   // Recursive TOC renderer
   const renderTocItems = (items: NavItem[], level = 0) => {
     return items.map((item, index) => (
       <div key={index}>
         <button
-          onClick={() => goToChapter(item.href)}
-          className={clsx(
-            "w-full text-left py-2 px-3 rounded-lg transition-colors text-sm",
+          onClick={() => {
+            goToChapter(item.href);
+            setShowToc(false);
+          }}
+          className={cn(
+            "w-full text-left py-2 px-3 rounded-md transition-all duration-fast text-sm font-ui",
             theme.hover,
-            currentChapter === item.label && clsx(theme.hover, "font-medium")
+            currentChapter === item.label && "font-medium bg-warm-500 text-white"
           )}
           style={{ paddingLeft: `${12 + level * 16}px` }}
         >
           {item.label}
         </button>
-        {item.subitems && item.subitems.length > 0 && renderTocItems(item.subitems, level + 1)}
       </div>
     ));
   };
 
-  const toolbarIconSize = 18;
+  const iconSize = 16;
 
   return (
-    <div 
-      className={clsx("relative w-full h-full transition-colors duration-300 overflow-hidden outline-none flex", theme.bg)}
-    >
-      {/* Reader Area */}
+    <div className="relative w-full h-full overflow-hidden bg-theme-base">
+      {/* Header Trigger Zone - Top edge only */}
+      <div 
+        className="fixed top-0 left-0 right-0 h-[12px] z-50"
+        onMouseEnter={handleHeaderTriggerEnter}
+      />
+
+      {/* Primary Header - Slides from top, follows content layout */}
+      <header
+        onMouseEnter={handleHeaderMouseEnter}
+        onMouseLeave={handleHeaderMouseLeave}
+        className={cn(
+          "fixed top-0 z-40 transition-transform duration-normal ease-out-custom",
+          showHeader ? "translate-y-0" : "-translate-y-full"
+        )}
+        style={{
+          left: layout.headerLeft,
+          right: layout.headerRight,
+        }}
+      >
+        {/* Toolbar - fills the available width */}
+        <div 
+          className={cn(
+            "h-[53px] flex items-center justify-between px-4",
+            "bg-theme-base"
+          )}
+          style={{ borderBottom: '0.5px solid var(--border-primary)' }}
+        >
+          {/* Left: Close & TOC */}
+          <div className="flex items-center gap-1">
+            <HeaderIconButton onClick={onClose} title="返回书库">
+              <ArrowLeft size={iconSize} />
+            </HeaderIconButton>
+            <HeaderIconButton 
+              onClick={handleToggleToc} 
+              title={showToc ? "关闭目录" : "目录"} 
+              active={showToc}
+            >
+              <List size={iconSize} />
+            </HeaderIconButton>
+          </div>
+
+          {/* Center: Chapter Title */}
+          <div className="flex-1 min-w-0 px-8">
+            <h1 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary truncate text-center font-ui">
+              {currentChapter || '阅读中'}
+            </h1>
+          </div>
+
+          {/* Right: Chat & Settings */}
+          <div className="flex items-center gap-1">
+            <HeaderIconButton 
+              onClick={handleToggleChat} 
+              title={showChat ? "关闭阅读助手" : "阅读助手"} 
+              active={showChat}
+              highlight={!!selectedText}
+            >
+              <MessageCircle size={iconSize} />
+            </HeaderIconButton>
+            <HeaderIconButton onClick={() => setSettingsOpen(true)} title="设置">
+              <Settings size={iconSize} />
+            </HeaderIconButton>
+          </div>
+        </div>
+      </header>
+
+      {/* Reader Area - Dynamic margins */}
       <div 
         ref={containerRef}
         tabIndex={0}
-        onClick={handleContainerClick}
-        className={clsx(
-          "relative h-full transition-all duration-300 outline-none w-[76%]",
-          showChat ? "" : "mx-auto"
-        )}
+        className="relative h-full transition-all duration-slow ease-out-custom outline-none"
+        style={{
+          marginLeft: layout.marginLeft,
+          marginRight: layout.marginRight,
+        }}
       >
         <div ref={viewerRef} className="absolute inset-0 w-full h-full" />
-
-        {/* Top edge hover zone */}
-        <div 
-          className="absolute top-0 left-0 right-0 h-12 z-15"
-          onMouseEnter={handleEdgeHover}
-        />
-
-        {/* Controls Overlay */}
-        <div className={clsx(
-          "absolute inset-0 z-20 pointer-events-none transition-opacity duration-300",
-          showControls ? "opacity-100" : "opacity-0"
-        )}>
-          {/* Top Bar */}
-          <div 
-            className={clsx(
-              "absolute top-0 left-0 right-0 p-4",
-              showControls ? "pointer-events-auto" : "pointer-events-none"
-            )}
-            onMouseEnter={handleEdgeHover}
-          >
-            <div
-              className={clsx(
-                "flex items-center justify-between max-w-4xl mx-auto gap-2",
-                "px-3 py-2 rounded-xl border backdrop-blur-sm",
-                theme.toolbarBg,
-                theme.border,
-                theme.toolbarText
-              )}
-            >
-              <button 
-                onClick={onClose} 
-                className={clsx("p-2 rounded-full transition-colors", theme.hover, theme.toolbarButtonText)}
-              >
-                <ArrowLeft size={toolbarIconSize} />
-              </button>
-              
-              <button 
-                onClick={() => setShowToc(true)} 
-                className={clsx("p-2 rounded-full transition-colors", theme.hover, theme.toolbarButtonText)}
-                title="Table of Contents"
-              >
-                <List size={toolbarIconSize} />
-              </button>
-              
-              <div className="flex-1 min-w-0">
-                <h1 className={clsx("text-sm font-medium truncate px-4 rounded-full py-1.5 text-center", theme.toolbarText)}>
-                  {currentChapter || 'Reader'}
-                </h1>
-              </div>
-
-              <button 
-                onClick={() => setShowChat(true)} 
-                className={clsx(
-                  "p-2 rounded-full transition-colors",
-                  selectedText 
-                    ? "bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200"
-                    : theme.hover
-                )}
-                title="阅读助手"
-              >
-                <MessageCircle
-                  size={toolbarIconSize}
-                  className={selectedText ? "text-white dark:text-zinc-900" : theme.toolbarButtonText}
-                />
-              </button>
-
-              <button 
-                onClick={() => setSettingsOpen(true)} 
-                className={clsx("p-2 rounded-full transition-colors", theme.hover, theme.toolbarButtonText)}
-              >
-                <Settings size={toolbarIconSize} />
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Table of Contents Panel */}
-      <div className={clsx(
-        "absolute inset-y-0 left-0 z-30 w-72 max-w-[85vw] bg-white dark:bg-zinc-900 border-r transition-transform duration-300",
-        showToc ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none",
-        theme.border
-      )}>
-        <div className="flex flex-col h-full">
-          <div className={clsx("flex items-center justify-between p-4 border-b", theme.border)}>
-            <h2 className={clsx("font-semibold text-sm tracking-wide", theme.text)}>
-              目录
-            </h2>
-            <button 
-              onClick={() => setShowToc(false)}
-              className={clsx("p-1 rounded-full", theme.hover)}
-            >
-              <X size={toolbarIconSize} className={theme.toolbarButtonText} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {toc.length > 0 ? (
-              renderTocItems(toc)
-            ) : (
-              <p className={clsx("text-sm p-4 text-center", theme.textMuted)}>No table of contents available</p>
-            )}
-          </div>
+      {/* Table of Contents Panel - Slide from left */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 w-[24%] max-w-[420px] min-w-[280px]",
+          "bg-theme-surface",
+          "transition-transform duration-normal ease-out-custom",
+          "flex flex-col",
+          showToc ? "translate-x-0" : "-translate-x-full"
+        )}
+        style={{ borderRight: '0.5px solid var(--border-primary)' }}
+      >
+        {/* TOC Header - Unified with Chat Header style */}
+        <div className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
+          <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
+            目录
+          </h2>
+          <HeaderIconButton onClick={() => setShowToc(false)} title="关闭">
+            <X size={iconSize} />
+          </HeaderIconButton>
         </div>
-      </div>
+
+        {/* TOC Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+          {toc.length > 0 ? (
+            renderTocItems(toc)
+          ) : (
+            <p className="text-sm text-theme-muted text-center py-8 font-ui">暂无目录</p>
+          )}
+        </div>
+      </aside>
 
       {/* TOC Backdrop */}
       {showToc && (
         <div 
-          className="absolute inset-0 z-25 bg-black/20" 
+          className="fixed inset-0 z-25 bg-ink-900/10 backdrop-blur-[1px] transition-opacity duration-normal"
           onClick={() => setShowToc(false)}
         />
       )}
 
-      {/* Chat Sidebar */}
-      {showChat && (
-        <ChatSidebar
-          isOpen={showChat}
-          onClose={() => setShowChat(false)}
-          selectedText={selectedText}
-          onClearSelection={() => setSelectedText('')}
-          quickPromptMode={quickPromptMode}
-          onQuickPromptHandled={() => setQuickPromptMode(null)}
-        />
-      )}
+      {/* Chat Sidebar - Slide from right */}
+      <ChatSidebar
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
+        selectedText={selectedText}
+        onClearSelection={() => setSelectedText('')}
+        quickPromptMode={quickPromptMode}
+        onQuickPromptHandled={() => setQuickPromptMode(null)}
+      />
     </div>
   );
 };
+
+// Header Icon Button - larger hit area
+interface HeaderIconButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+  title?: string;
+  active?: boolean;
+  highlight?: boolean;
+}
+
+const HeaderIconButton = ({ onClick, children, title, active, highlight }: HeaderIconButtonProps) => (
+  <button
+    onClick={onClick}
+    title={title}
+    className={cn(
+      "w-9 h-9 flex items-center justify-center rounded-md",
+      "transition-all duration-fast ease-out-custom",
+      "text-theme-secondary hover:text-theme-primary",
+      active && "bg-warm-500 text-white",
+      highlight && "bg-theme-primary text-theme-base",
+      "hover:bg-theme-elevated active:scale-95"
+    )}
+  >
+    {children}
+  </button>
+);
 
 export default EpubReader;

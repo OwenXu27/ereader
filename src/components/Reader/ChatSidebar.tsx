@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Quote } from 'lucide-react';
-import clsx from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { sendChatMessage, type ChatMessageType, TranslationError, getQuickPrompt, type QuickPromptMode } from '../../services/llm';
-import { useTheme } from '../../hooks/useTheme';
 import { useBookStore } from '../../store/useBookStore';
+
+// Utility for cleaner tailwind classes
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -33,7 +38,6 @@ export const ChatSidebar = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<ChatMessageType[]>([]);
   
-  const theme = useTheme();
   const { settings } = useBookStore();
 
   // Track messages for async operations
@@ -44,12 +48,12 @@ export const ChatSidebar = ({
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   // Focus input when sidebar opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
@@ -90,7 +94,7 @@ export const ChatSidebar = ({
       const assistantMessage: ChatMessageType = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      const errorMessage = err instanceof TranslationError ? err.message : 'Failed to get response';
+      const errorMessage = err instanceof TranslationError ? err.message : '获取回复失败';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -168,76 +172,105 @@ export const ChatSidebar = ({
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [isOpen, selectedText, isLoading, buildPrompt, sendMessage, applyPrompt, buildMessageWithQuote]);
 
-  const headerIconSize = 18;
+  const iconSize = 16;
+  const hasContent = input.trim().length > 0;
 
   return (
-    <div
-      className={clsx(
-        "relative w-[24%] h-full border-l flex flex-col text-sm",
-        theme.bg,
-        theme.text,
-        theme.border
+    <aside
+      className={cn(
+        "fixed inset-y-0 right-0 z-40 w-[24%] max-w-[420px] min-w-[320px]",
+        "bg-theme-base",
+        "transition-transform duration-normal ease-out-custom",
+        "flex flex-col font-ui",
+        isOpen ? "translate-x-0" : "translate-x-full"
       )}
+      style={{ borderLeft: '0.5px solid var(--border-primary)' }}
     >
-      {/* Collapse Button */}
-      <div className="absolute top-0 left-0 right-0 h-[25%] group/top">
+      {/* Header - 53px fixed height, matches main header */}
+      <header className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
+        <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
+          AI 助手
+        </h2>
         <button
           onClick={onClose}
-          className={clsx(
-            "absolute right-2 top-2 z-10",
-            "w-7 h-7 rounded-full transition-opacity",
-            "opacity-0 group-hover/top:opacity-100",
-            "flex items-center justify-center",
-            theme.textMuted,
-            theme.hover
+          className={cn(
+            "w-9 h-9 flex items-center justify-center rounded-md",
+            "text-theme-secondary hover:text-theme-primary",
+            "hover:bg-theme-elevated active:scale-95",
+            "transition-all duration-fast ease-out-custom"
           )}
           title="收起"
+          type="button"
         >
-          <X size={headerIconSize} />
+          <X size={iconSize} />
         </button>
-      </div>
+      </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-28 space-y-3">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-0">
         {messages.length === 0 && (
-          <div className={clsx("text-center py-8", theme.textMuted)}>
-            <p className="text-sm">选择文字后可以在这里提问</p>
-            <p className={clsx("text-xs mt-2", theme.textMuted)}>
+          <div className="text-center py-12 text-theme-muted">
+            <p className="text-sm mb-1 font-ui">选择文字后可以在这里提问</p>
+            <p className="text-xs opacity-60 font-ui">
               例如：这个词是什么意思？
             </p>
+            <div className="mt-6 flex flex-col gap-2">
+              <QuickPromptButton 
+                label="Alt + G 语法分析" 
+                onClick={() => selectedText && applyPrompt('grammar')}
+                disabled={!selectedText}
+              />
+              <QuickPromptButton 
+                label="Alt + D 背景知识" 
+                onClick={() => selectedText && applyPrompt('background')}
+                disabled={!selectedText}
+              />
+              <QuickPromptButton 
+                label="Alt + C 引用提问" 
+                onClick={() => selectedText && applyPrompt('plain')}
+                disabled={!selectedText}
+              />
+            </div>
           </div>
         )}
 
         {messages.map((msg, idx) => (
-          <div key={idx} className={clsx("w-full pt-2.5 pb-2 border-t", theme.border)}>
-            <div className="mb-1 text-[11px] font-medium tracking-wide uppercase">
+          <div 
+            key={idx} 
+            className="w-full py-3"
+            style={idx > 0 ? { borderTop: '0.5px solid var(--border-primary)' } : undefined}
+          >
+            <div className="mb-1.5 text-[11px] font-semibold tracking-wide uppercase font-ui">
               {msg.role === 'user' ? (
-                <span className={theme.textMuted}>你</span>
+                <span className="text-theme-muted">你</span>
               ) : (
-                <span className={theme.textMuted}>助手</span>
+                <span className="text-warm-500">助手</span>
               )}
             </div>
-            <p className={clsx(
-              "text-sm whitespace-pre-wrap",
-              msg.role === 'user' ? theme.textUser : theme.textAssistant
+            <div className={cn(
+              "text-sm whitespace-pre-wrap leading-relaxed font-ui",
+              msg.role === 'user' ? "text-theme-secondary" : "text-theme-primary"
             )}>
               {msg.content}
-            </p>
+            </div>
           </div>
         ))}
 
         {isLoading && (
-          <div className={clsx("w-full pt-2.5 pb-2 border-t", theme.border)}>
-            <div className="flex gap-1">
-              <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="w-full py-3" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold tracking-wide text-warm-500 uppercase font-ui">助手</span>
+              <div className="flex gap-1">
+                <span className="w-1 h-1 rounded-full animate-pulse-dot" style={{ animationDelay: '0ms', backgroundColor: 'var(--text-muted)' }} />
+                <span className="w-1 h-1 rounded-full animate-pulse-dot" style={{ animationDelay: '150ms', backgroundColor: 'var(--text-muted)' }} />
+                <span className="w-1 h-1 rounded-full animate-pulse-dot" style={{ animationDelay: '300ms', backgroundColor: 'var(--text-muted)' }} />
+              </div>
             </div>
           </div>
         )}
 
         {error && (
-          <div className={clsx("text-center text-sm py-2", theme.textMuted)}>
+          <div className="py-3 text-sm text-theme-muted font-ui" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
             {error}
           </div>
         )}
@@ -245,58 +278,86 @@ export const ChatSidebar = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className={clsx("absolute inset-x-0 bottom-0 px-2 pt-2 pb-3", theme.bgInput)}>
-        <div className={clsx(
-          "flex flex-col gap-2 rounded-[4px] border px-2 py-1.5 min-h-[56px]",
-          theme.border
-        )}>
+      {/* Input Area - Original style with border removed */}
+      <div className="shrink-0 px-3 py-3 bg-theme-base">
+        <div className={cn(
+          "flex flex-col gap-2 rounded-lg border px-3 py-2.5",
+          "bg-theme-input",
+          hasContent && "border-warm-500/50",
+          "transition-colors duration-fast"
+        )} style={{ borderWidth: '0.5px', borderColor: hasContent ? undefined : 'var(--border-primary)' }}>
+          {/* Quote Bar */}
           {quotedText && (
             <div
-              className={clsx(
-                "rounded-[10px] px-1 h-[22px] flex items-center",
-                theme.isDark ? "bg-zinc-900/40" : theme.isSepia ? "bg-[#f6edd8]" : "bg-zinc-50"
+              className={cn(
+                "h-[22px] flex items-center gap-1.5 px-2 rounded-[10px]",
+                "bg-theme-elevated/60"
               )}
               onMouseEnter={() => setIsQuoteHover(true)}
               onMouseLeave={() => setIsQuoteHover(false)}
             >
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setQuotedText('');
-                    onClearSelection();
-                  }}
-                  className={clsx(
-                    "flex-shrink-0 rounded p-0.5 transition-colors",
-                    theme.isDark ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-zinc-200 text-zinc-500"
-                  )}
-                  title={isQuoteHover ? "清除引用" : "引用"}
-                >
-                  {isQuoteHover ? <X size={12} /> : <Quote size={12} />}
-                </button>
-                <p className={clsx("text-sm line-clamp-1 flex-1", theme.isDark ? "text-zinc-100" : "text-zinc-800")}>
-                  {quotedText}
-                </p>
-              </div>
+              <button
+                onClick={() => {
+                  setQuotedText('');
+                  onClearSelection();
+                }}
+                className={cn(
+                  "flex-shrink-0 rounded p-0.5 transition-colors",
+                  "text-theme-muted hover:text-theme-primary"
+                )}
+                title={isQuoteHover ? "清除引用" : "引用"}
+              >
+                {isQuoteHover ? <X size={12} /> : <Quote size={12} />}
+              </button>
+              <p className="text-sm line-clamp-1 flex-1 text-theme-primary font-ui">
+                {quotedText}
+              </p>
             </div>
           )}
+          
+          {/* Input Row - No send button */}
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="输入问题..."
-            className={clsx(
-              "flex-1 resize-none bg-transparent px-0 py-0 text-sm leading-snug focus:outline-none min-h-[22px]",
-              theme.isDark ? "placeholder:text-zinc-500" : "placeholder:text-zinc-400"
+            placeholder="按 Enter 发送..."
+            className={cn(
+              "w-full resize-none bg-transparent text-sm leading-relaxed",
+              "text-theme-primary placeholder:text-theme-muted",
+              "focus:outline-none min-h-[22px] py-0.5",
+              "custom-scrollbar font-ui"
             )}
             rows={1}
             disabled={isLoading}
           />
         </div>
       </div>
-    </div>
+    </aside>
   );
 };
+
+// Quick Prompt Button Component
+interface QuickPromptButtonProps {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+const QuickPromptButton = ({ label, onClick, disabled }: QuickPromptButtonProps) => (
+  <button 
+    onClick={onClick}
+    disabled={disabled}
+    className={cn(
+      "w-full px-3 py-2 rounded-md text-xs text-left font-ui",
+      "bg-theme-elevated text-theme-secondary",
+      "hover:bg-theme-surface hover:text-theme-primary",
+      "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-theme-elevated",
+      "transition-all duration-fast"
+    )}
+  >
+    {label}
+  </button>
+);
 
 export default ChatSidebar;

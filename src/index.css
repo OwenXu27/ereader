@@ -2,22 +2,213 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   CSS Variables - Theme System
+   ============================================ */
+
+:root {
+  /* Light Theme - Refined */
+  --bg-base: #FFFCF8;
+  --bg-surface: #FFFDF9;
+  --bg-elevated: #F8F6F0;
+  --bg-input: #FFFFFF;
+  
+  --text-primary: #2D2A26;
+  --text-secondary: #5C5852;
+  --text-muted: #9A958C;
+  --text-inverse: #F5F3EF;
+  
+  --border-primary: rgba(45, 42, 38, 0.08);
+  --border-active: rgba(45, 42, 38, 0.2);
+  
+  --accent-warm: #9B7B5C;
+  --accent-warm-hover: #7D6146;
+  --selection-bg: rgba(155, 123, 92, 0.15);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="sepia"] {
+  /* Sepia Theme - Warmer and softer */
+  --bg-base: #F9F3E8;
+  --bg-surface: #F5ECD8;
+  --bg-elevated: #EDE4D0;
+  --bg-input: #FFFDF7;
+  
+  --text-primary: #4A3F35;
+  --text-secondary: #7A6B5A;
+  --text-muted: #A89B8C;
+  --text-inverse: #F9F3E8;
+  
+  --border-primary: rgba(74, 63, 53, 0.1);
+  --border-active: rgba(74, 63, 53, 0.25);
+  
+  --accent-warm: #8B6F4E;
+  --accent-warm-hover: #6B563D;
+  --selection-bg: rgba(139, 111, 78, 0.2);
+  
+  --shadow-sm: 0 1px 2px rgba(74, 63, 53, 0.05);
+  --shadow-md: 0 4px 12px rgba(74, 63, 53, 0.08);
+  --shadow-lg: 0 8px 24px rgba(74, 63, 53, 0.12);
+}
+
+[data-theme="dark"] {
+  /* Dark Theme - Refined contrast */
+  --bg-base: #1C1A17;
+  --bg-surface: #252320;
+  --bg-elevated: #2E2C28;
+  --bg-input: #161412;
+  
+  --text-primary: #E8E4DF;
+  --text-secondary: #B8B2A8;
+  --text-muted: #7A746C;
+  --text-inverse: #1C1A17;
+  
+  --border-primary: rgba(232, 228, 223, 0.08);
+  --border-active: rgba(232, 228, 223, 0.2);
+  
+  --accent-warm: #C9B896;
+  --accent-warm-hover: #D4C6A8;
+  --selection-bg: rgba(201, 184, 150, 0.2);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
 @layer base {
   html, body {
     @apply h-full overflow-hidden;
   }
+  
   body {
-    @apply bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased font-serif;
+    @apply antialiased;
+    font-family: 'Source Serif 4', Merriweather, Georgia, serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
+  
+  /* Selection styling */
+  ::selection {
+    background-color: var(--selection-bg);
   }
 }
 
-/* Custom scrollbar for reader if needed */
-.reader-scroll::-webkit-scrollbar {
-  width: 8px;
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
 }
-.reader-scroll::-webkit-scrollbar-track {
-  @apply bg-transparent;
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-.reader-scroll::-webkit-scrollbar-thumb {
-  @apply bg-zinc-300 dark:bg-zinc-700 rounded-full;
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  opacity: 0.3;
+  border-radius: 1px;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+@layer utilities {
+  /* Theme-aware background utilities */
+  .bg-theme-base {
+    background-color: var(--bg-base);
+  }
+  .bg-theme-surface {
+    background-color: var(--bg-surface);
+  }
+  .bg-theme-elevated {
+    background-color: var(--bg-elevated);
+  }
+  .bg-theme-input {
+    background-color: var(--bg-input);
+  }
+  
+  /* Theme-aware text utilities */
+  .text-theme-primary {
+    color: var(--text-primary);
+  }
+  .text-theme-secondary {
+    color: var(--text-secondary);
+  }
+  .text-theme-muted {
+    color: var(--text-muted);
+  }
+  
+  /* Theme-aware border utilities */
+  .border-theme-primary {
+    border-color: var(--border-primary);
+  }
+  .border-theme-active {
+    border-color: var(--border-active);
+  }
+  
+  /* Warm accent utilities */
+  .text-warm-500 {
+    color: var(--accent-warm);
+  }
+  .bg-warm-500 {
+    background-color: var(--accent-warm);
+  }
+  
+  /* Animation utilities */
+  .transition-fast {
+    transition-duration: 120ms;
+  }
+  .transition-normal {
+    transition-duration: 200ms;
+  }
+  .transition-slow {
+    transition-duration: 280ms;
+  }
+  
+  .ease-out-custom {
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+}
+
+/* ============================================
+   Animation Keyframes
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
 }
