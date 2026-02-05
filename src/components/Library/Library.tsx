@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useBookStore } from '../../store/useBookStore';
+import { useTranslation } from '../../i18n';
 import { saveBook, deleteBook } from '../../services/db';
-import { Plus, Trash2, Book as BookIcon, Settings, Loader2 } from 'lucide-react';
+import { Plus, X, Book as BookIcon, Settings, Loader2 } from 'lucide-react';
+import { LeCorbusierCover } from '../BookCover/LeCorbusierCover';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ePub from 'epubjs';
 
-// Utility for cleaner tailwind classes
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -41,14 +42,10 @@ const extractCoverDataUrl = async (book: ePub.Book): Promise<string> => {
   }
 };
 
-/**
- * Generate a UUID, with fallback for browsers without crypto.randomUUID
- */
 const generateUUID = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  // Fallback implementation (RFC4122 v4 compliant)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -58,29 +55,22 @@ const generateUUID = (): string => {
 
 export const Library: React.FC = () => {
   const { books, setBooks, setCurrentBook, setSettingsOpen } = useBookStore();
+  const { t, language } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      console.log('No file selected');
-      return;
-    }
+    if (!file) return;
 
-    console.log('File selected:', file.name, file.type, file.size);
     setIsLoading(true);
     setError(null);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      console.log('ArrayBuffer loaded, size:', arrayBuffer.byteLength);
-      
       const book = ePub(arrayBuffer);
       const metadata = await book.loaded.metadata;
-      console.log('Metadata loaded:', metadata);
-      
       const coverUrl = await extractCoverDataUrl(book);
 
       const newBook = {
@@ -95,13 +85,11 @@ export const Library: React.FC = () => {
 
       await saveBook(newBook, arrayBuffer);
       setBooks([...books, newBook]);
-      console.log('Book saved successfully');
     } catch (err) {
       console.error('Error loading book:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load book');
+      setError(err instanceof Error ? err.message : (t('common.error') as string));
     } finally {
       setIsLoading(false);
-      // Reset the input so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -118,42 +106,75 @@ export const Library: React.FC = () => {
     setBooks(books.filter(b => b.id !== id));
   };
 
-  const iconSize = 18;
+  const contentMargin = '12%';
+  const readingCount = books.filter(b => b.progress > 0 && b.progress < 1).length;
+  const completedCount = books.filter(b => b.progress >= 1).length;
+
+  // Format number with leading zero based on language
+  const fmtNum = (n: number) => language === 'zh' 
+    ? n.toString().padStart(2, '0')
+    : n.toString();
 
   return (
-    <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <header className="flex justify-between items-center mb-10">
-          <h1 className="text-2xl font-semibold font-reading text-theme-primary tracking-tight">
-            书库
-          </h1>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setSettingsOpen(true)}
-              className={cn(
-                "w-10 h-10 flex items-center justify-center rounded-lg",
-                "text-theme-secondary hover:text-theme-primary",
-                "hover:bg-theme-surface transition-all duration-fast ease-out-custom",
-                "active:scale-95"
-              )}
+    <div className="flex-1 flex flex-col h-full bg-theme-base font-ui selection:bg-warm-500/20">
+      {/* Header - Refined Swiss Style */}
+      <header 
+        className="pt-8 pb-6 shrink-0"
+        style={{ marginLeft: contentMargin, marginRight: contentMargin }}
+      >
+        <div className="flex items-end justify-between">
+          {/* Left: Typography-focused Title Block */}
+          <div className="flex flex-col gap-1">
+            {/* Title Row */}
+            <div className="flex items-baseline gap-4">
+              <h1 className="text-[15px] font-normal text-theme-primary tracking-[-0.02em]">
+                {t('library.title') as string}
+              </h1>
+              <span className="text-[12px] font-light tabular-nums text-theme-muted/50">
+                {fmtNum(books.length)}
+              </span>
+            </div>
+            
+            {/* Status Row - Condensed */}
+            {(readingCount > 0 || completedCount > 0) && (
+              <div className="flex items-center gap-3 text-[10px] tracking-[0.05em]">
+                {readingCount > 0 && (
+                  <span className="text-warm-500/90">
+                    {t('library.reading') as string} {fmtNum(readingCount)}
+                  </span>
+                )}
+                {readingCount > 0 && completedCount > 0 && (
+                  <span className="text-theme-muted/30">/</span>
+                )}
+                {completedCount > 0 && (
+                  <span className="text-theme-muted/50">
+                    {t('library.completed') as string} {fmtNum(completedCount)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Action Cluster */}
+          <div className="flex items-center gap-1">
+            <IconButton 
+              onClick={() => setSettingsOpen(true)} 
+              title={t('library.settings') as string}
             >
-              <Settings size={iconSize} />
-            </button>
-            <button 
+              <Settings size={15} strokeWidth={1.5} />
+            </IconButton>
+            <IconButton 
               onClick={handleButtonClick}
               disabled={isLoading}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-lg",
-                "bg-theme-primary text-theme-base",
-                "hover:opacity-90 transition-all duration-fast ease-out-custom",
-                "active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
-                "font-ui text-sm font-medium"
-              )}
+              title={t('library.addBook') as string}
+              variant="primary"
             >
-              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              <span>{isLoading ? '导入中...' : '添加书籍'}</span>
-            </button>
+              {isLoading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Plus size={15} strokeWidth={1.5} />
+              )}
+            </IconButton>
             <input 
               ref={fileInputRef}
               type="file" 
@@ -162,37 +183,82 @@ export const Library: React.FC = () => {
               onChange={handleFileUpload} 
             />
           </div>
-        </header>
+        </div>
 
+        {/* Subtle bottom rule */}
+        <div className="mt-6 h-px bg-gradient-to-r from-theme-muted/20 via-theme-muted/10 to-transparent" />
+      </header>
+
+      {/* Content Area */}
+      <div 
+        className="flex-1 overflow-y-auto pb-12"
+        style={{ 
+          marginLeft: contentMargin, 
+          marginRight: contentMargin,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 text-red-600 rounded-lg text-sm" style={{ border: '0.5px solid rgba(239, 68, 68, 0.2)' }}>
+          <div className="mb-8 p-3 text-[11px] text-theme-primary bg-theme-elevated/30 rounded-sm border border-theme-muted/10 max-w-md animate-in fade-in slide-in-from-top-2 duration-300">
             {error}
           </div>
         )}
 
         {/* Books Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {books.map((book) => (
-            <BookCard 
-              key={book.id} 
-              book={book} 
-              onClick={() => setCurrentBook(book)}
-              onRemove={(e) => handleRemove(e, book.id)}
-            />
-          ))}
-
-          {books.length === 0 && (
-            <div className="col-span-full text-center py-20 text-theme-muted">
-              <BookIcon size={48} className="mx-auto mb-4 opacity-30" />
-              <p className="text-sm">暂无书籍，导入 EPUB 开始阅读</p>
-            </div>
-          )}
-        </div>
+        {books.length > 0 ? (
+          <div className="grid grid-cols-4 gap-6">
+            {books.map((book, index) => (
+              <BookCard 
+                key={book.id} 
+                book={book} 
+                index={index}
+                onClick={() => setCurrentBook(book)}
+                onRemove={(e) => handleRemove(e, book.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState onAdd={handleButtonClick} t={t} />
+        )}
       </div>
     </div>
   );
 };
+
+// Icon Button Component
+interface IconButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+  title?: string;
+  disabled?: boolean;
+  variant?: 'default' | 'primary';
+}
+
+const IconButton = ({ onClick, children, title, disabled, variant = 'default' }: IconButtonProps) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={cn(
+      "w-9 h-9 flex items-center justify-center rounded-full",
+      "transition-all duration-200 ease-out",
+      "disabled:opacity-40 disabled:cursor-not-allowed",
+      variant === 'default' && [
+        "text-theme-muted hover:text-theme-primary",
+        "hover:bg-theme-elevated/50"
+      ],
+      variant === 'primary' && [
+        "bg-theme-elevated text-theme-primary",
+        "hover:bg-warm-500 hover:text-white",
+        "shadow-sm hover:shadow-md"
+      ]
+    )}
+  >
+    {children}
+  </button>
+);
 
 // Book Card Component
 interface BookCardProps {
@@ -203,68 +269,105 @@ interface BookCardProps {
     cover?: string;
     progress: number;
   };
+  index: number;
   onClick: () => void;
   onRemove: (e: React.MouseEvent) => void;
 }
 
-const BookCard = ({ book, onClick, onRemove }: BookCardProps) => (
+const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
   <div 
     onClick={onClick}
     className={cn(
-      "group relative aspect-[2/3] rounded-lg overflow-hidden cursor-pointer",
-      "bg-theme-surface shadow-sm",
-      "transition-all duration-normal ease-out-custom",
-      "hover:-translate-y-1 hover:shadow-md",
-      "active:scale-[0.98]"
+      "group relative aspect-[2/3] cursor-pointer",
+      "transition-all duration-500 ease-out",
+      "hover:scale-[1.02] hover:-translate-y-1",
+      "active:scale-[0.98] active:duration-200"
     )}
+    style={{ 
+      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      animationDelay: `${index * 50}ms`
+    }}
   >
-    {/* Cover Image */}
-    {book.cover ? (
-      <img
-        src={book.cover}
-        alt={`${book.title} cover`}
-        className="absolute inset-0 h-full w-full object-cover"
-        loading="lazy"
-      />
-    ) : (
-      <div className="absolute inset-0 flex items-center justify-center bg-theme-elevated">
-        <BookIcon size={40} className="text-theme-muted/50" />
-      </div>
-    )}
+    {/* Cover */}
+    <LeCorbusierCover 
+      title={book.title}
+      author={book.author}
+    />
     
-    {/* Gradient Overlay */}
-    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
-    
-    {/* Book Info */}
-    <div className="absolute inset-x-0 bottom-0 p-3">
-      <h3 className="font-medium text-white text-sm line-clamp-2 leading-snug">
-        {book.title}
-      </h3>
-      <p className="text-xs text-white/70 mt-1 line-clamp-1">{book.author}</p>
-    </div>
-    
-    {/* Progress Bar */}
+    {/* Progress Indicator - Minimal dot */}
     {book.progress > 0 && (
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
-        <div 
-          className="h-full bg-warm-500 transition-all duration-slow" 
-          style={{ width: `${book.progress * 100}%` }} 
-        />
+      <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
+        <div className="flex-1 h-px bg-theme-base/40 overflow-hidden">
+          <div 
+            className="h-full bg-warm-500 transition-all duration-700 ease-out"
+            style={{ width: `${book.progress * 100}%` }} 
+          />
+        </div>
+        {book.progress >= 1 && (
+          <div className="w-1 h-1 rounded-full bg-warm-500" />
+        )}
       </div>
     )}
     
-    {/* Delete Button */}
+    {/* Delete Button - Appears on hover with delay */}
     <button 
       onClick={onRemove}
       className={cn(
-        "absolute top-2 right-2 w-8 h-8 flex items-center justify-center",
-        "bg-red-500 text-white rounded-md",
-        "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100",
-        "transition-all duration-fast ease-out-custom",
-        "hover:bg-red-600 active:scale-95"
+        "absolute top-2 right-2 w-7 h-7 flex items-center justify-center",
+        "bg-theme-base/80 backdrop-blur-sm text-theme-muted rounded-full",
+        "opacity-0 translate-y-1",
+        "group-hover:opacity-100 group-hover:translate-y-0",
+        "transition-all duration-200 ease-out delay-100",
+        "hover:bg-theme-base hover:text-theme-primary"
       )}
     >
-      <Trash2 size={14} />
+      <X size={13} strokeWidth={1.5} />
+    </button>
+
+    {/* Hover overlay - subtle */}
+    <div className={cn(
+      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent",
+      "opacity-0 group-hover:opacity-100",
+      "transition-opacity duration-300 pointer-events-none"
+    )} />
+  </div>
+);
+
+// Empty State Component
+interface EmptyStateProps {
+  onAdd: () => void;
+  t: (key: string) => string | Record<string, string>;
+}
+
+const EmptyState = ({ onAdd, t }: EmptyStateProps) => (
+  <div className="flex flex-col items-start justify-center min-h-[50vh] text-theme-muted">
+    {/* Visual element */}
+    <div className="mb-6 relative">
+      <div className="w-16 h-20 border border-dashed border-theme-muted/20 rounded-sm flex items-center justify-center">
+        <BookIcon size={24} className="opacity-20" strokeWidth={1} />
+      </div>
+      {/* Decorative lines */}
+      <div className="absolute -right-4 top-1/2 w-6 h-px bg-theme-muted/10" />
+      <div className="absolute -right-4 top-1/2 translate-y-2 w-4 h-px bg-theme-muted/10" />
+    </div>
+
+    {/* Text content */}
+    <p className="text-[13px] text-theme-primary/80 mb-1">{t('library.empty') as string}</p>
+    <p className="text-[11px] text-theme-muted/60 mb-6">{t('library.emptyHint') as string}</p>
+
+    {/* Action */}
+    <button
+      onClick={onAdd}
+      className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-full",
+        "bg-theme-elevated text-theme-secondary text-[11px]",
+        "hover:bg-warm-500 hover:text-white",
+        "transition-all duration-300 ease-out",
+        "group"
+      )}
+    >
+      <Plus size={14} className="transition-transform duration-300 group-hover:rotate-90" />
+      <span>{t('library.addBook') as string}</span>
     </button>
   </div>
 );

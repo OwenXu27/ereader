@@ -165,17 +165,64 @@ export const QUICK_PROMPTS = {
 
 export type QuickPromptMode = 'grammar' | 'background' | 'plain';
 
+// English versions of quick prompts
+const QUICK_PROMPTS_EN = {
+  grammar: (_text: string) => `Please analyze the grammar structure of the quoted English sentence:
+
+**1. Core Structure**
+Identify the subject-predicate-object/complement structure
+
+**2. Modifiers**
+- What do attributive clauses/participial phrases modify
+- Does the adverbial indicate time, condition, cause, or other
+- Function of parenthetical expressions
+
+**3. Special Grammar**
+Explain any special grammar phenomena (inversion, ellipsis, subjunctive, etc.)
+
+**4. Chinese Translation**
+Provide a smooth and natural Chinese translation
+
+Note: Keep explanations concise and clear.`,
+
+  background: (_text: string) => `Please interpret the quoted text:
+
+**1. Surface Meaning**
+What is this passage saying?
+
+**2. Implicit Information**
+- What historical background, cultural allusions, or professional knowledge is involved?
+- What deeper meaning does the author want to express?
+- How does it relate to the context?
+
+**3. Extended Reading** (optional)
+Briefly supplement explanations if important concepts are involved
+
+Keep it concise, a few sentences for each section.`,
+
+  vocabulary: (_text: string) => `Please explain the quoted vocabulary/expression:
+
+Include:
+- Basic meaning (in Chinese)
+- Specific meaning in this context
+- Common usage or collocations
+- Synonym differentiation (if applicable)`,
+
+  plain: (text: string) => text,
+};
+
 /**
- * 获取 Quick Prompt 的完整文本
+ * Get Quick Prompt text based on mode and language
  */
-export const getQuickPrompt = (mode: QuickPromptMode, selectedText: string): string => {
+export const getQuickPrompt = (mode: QuickPromptMode, selectedText: string, language: 'zh' | 'en' = 'zh'): string => {
+  const prompts = language === 'en' ? QUICK_PROMPTS_EN : QUICK_PROMPTS;
   switch (mode) {
     case 'grammar':
-      return QUICK_PROMPTS.grammar(selectedText);
+      return prompts.grammar(selectedText);
     case 'background':
-      return QUICK_PROMPTS.background(selectedText);
+      return prompts.background(selectedText);
     case 'plain':
-      return QUICK_PROMPTS.plain(selectedText);
+      return prompts.plain(selectedText);
     default:
       return selectedText;
   }

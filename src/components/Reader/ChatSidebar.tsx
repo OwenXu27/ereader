@@ -4,8 +4,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { sendChatMessage, type ChatMessageType, TranslationError, getQuickPrompt, type QuickPromptMode } from '../../services/llm';
 import { useBookStore } from '../../store/useBookStore';
+import { useTranslation } from '../../i18n';
 
-// Utility for cleaner tailwind classes
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -39,6 +39,7 @@ export const ChatSidebar = ({
   const messagesRef = useRef<ChatMessageType[]>([]);
   
   const { settings } = useBookStore();
+  const { t, language } = useTranslation();
 
   // Track messages for async operations
   useEffect(() => {
@@ -69,8 +70,8 @@ export const ChatSidebar = ({
 
   const buildPrompt = useCallback((mode: QuickPromptMode) => {
     if (!selectedText) return '';
-    return getQuickPrompt(mode, selectedText);
-  }, [selectedText]);
+    return getQuickPrompt(mode, selectedText, language);
+  }, [selectedText, language]);
 
   const buildMessageWithQuote = useCallback((content: string, quote?: string) => {
     if (!quote) return content;
@@ -94,7 +95,7 @@ export const ChatSidebar = ({
       const assistantMessage: ChatMessageType = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      const errorMessage = err instanceof TranslationError ? err.message : '获取回复失败';
+      const errorMessage = err instanceof TranslationError ? err.message : 'Failed to get response';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -172,7 +173,6 @@ export const ChatSidebar = ({
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [isOpen, selectedText, isLoading, buildPrompt, sendMessage, applyPrompt, buildMessageWithQuote]);
 
-  const iconSize = 16;
   const hasContent = input.trim().length > 0;
 
   return (
@@ -189,7 +189,7 @@ export const ChatSidebar = ({
       {/* Header - 53px fixed height, matches main header */}
       <header className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
         <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
-          AI 助手
+          {t('reader.aiAssistant') as string}
         </h2>
         <button
           onClick={onClose}
@@ -199,10 +199,10 @@ export const ChatSidebar = ({
             "hover:bg-theme-elevated active:scale-95",
             "transition-all duration-fast ease-out-custom"
           )}
-          title="收起"
+          title={t('reader.close') as string}
           type="button"
         >
-          <X size={iconSize} />
+          <X size={16} />
         </button>
       </header>
 
@@ -210,23 +210,23 @@ export const ChatSidebar = ({
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-0">
         {messages.length === 0 && (
           <div className="text-center py-12 text-theme-muted">
-            <p className="text-sm mb-1 font-ui">选择文字后可以在这里提问</p>
+            <p className="text-sm mb-1 font-ui">{t('reader.placeholder') as string}</p>
             <p className="text-xs opacity-60 font-ui">
-              例如：这个词是什么意思？
+              {t('reader.placeholderHint') as string}
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <QuickPromptButton 
-                label="Alt + G 语法分析" 
+                label={`Alt + G ${t('reader.grammar') as string}`}
                 onClick={() => selectedText && applyPrompt('grammar')}
                 disabled={!selectedText}
               />
               <QuickPromptButton 
-                label="Alt + D 背景知识" 
+                label={`Alt + D ${t('reader.background') as string}`}
                 onClick={() => selectedText && applyPrompt('background')}
                 disabled={!selectedText}
               />
               <QuickPromptButton 
-                label="Alt + C 引用提问" 
+                label={`Alt + C ${t('reader.quote') as string}`}
                 onClick={() => selectedText && applyPrompt('plain')}
                 disabled={!selectedText}
               />
@@ -242,9 +242,9 @@ export const ChatSidebar = ({
           >
             <div className="mb-1.5 text-[11px] font-semibold tracking-wide uppercase font-ui">
               {msg.role === 'user' ? (
-                <span className="text-theme-muted">你</span>
+                <span className="text-theme-muted">{t('chat.you') as string}</span>
               ) : (
-                <span className="text-warm-500">助手</span>
+                <span className="text-warm-500">{t('chat.assistant') as string}</span>
               )}
             </div>
             <div className={cn(
@@ -259,7 +259,7 @@ export const ChatSidebar = ({
         {isLoading && (
           <div className="w-full py-3" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold tracking-wide text-warm-500 uppercase font-ui">助手</span>
+              <span className="text-[11px] font-semibold tracking-wide text-warm-500 uppercase font-ui">{t('chat.assistant') as string}</span>
               <div className="flex gap-1">
                 <span className="w-1 h-1 rounded-full animate-pulse-dot" style={{ animationDelay: '0ms', backgroundColor: 'var(--text-muted)' }} />
                 <span className="w-1 h-1 rounded-full animate-pulse-dot" style={{ animationDelay: '150ms', backgroundColor: 'var(--text-muted)' }} />
@@ -278,7 +278,7 @@ export const ChatSidebar = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Original style with border removed */}
+      {/* Input Area */}
       <div className="shrink-0 px-3 py-3 bg-theme-base">
         <div className={cn(
           "flex flex-col gap-2 rounded-lg border px-3 py-2.5",
@@ -315,13 +315,13 @@ export const ChatSidebar = ({
             </div>
           )}
           
-          {/* Input Row - No send button */}
+          {/* Input Row */}
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="按 Enter 发送..."
+            placeholder={language === 'zh' ? "按 Enter 发送..." : "Press Enter to send..."}
             className={cn(
               "w-full resize-none bg-transparent text-sm leading-relaxed",
               "text-theme-primary placeholder:text-theme-muted",

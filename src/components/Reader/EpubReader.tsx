@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { NavItem } from 'epubjs';
 import { useBookStore } from '../../store/useBookStore';
+import { useTranslation } from '../../i18n';
 import { useTheme } from '../../hooks/useTheme';
 import { useEpubReader } from '../../hooks/useEpubReader';
 import { useReaderKeyboard } from '../../hooks/useReaderKeyboard';
@@ -9,7 +10,6 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ChatSidebar } from './ChatSidebar';
 
-// Utility for cleaner tailwind classes
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -29,6 +29,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   
   const hideHeaderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setSettingsOpen } = useBookStore();
+  const { t } = useTranslation();
   const theme = useTheme();
 
   const {
@@ -41,12 +42,10 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     goToChapter,
   } = useEpubReader({ bookData, initialCfi });
 
-  // Handle quick prompt trigger
   const handleQuickPrompt = useCallback((mode: import('../../services/llm').QuickPromptMode) => {
     setQuickPromptMode(mode);
   }, []);
 
-  // Keyboard navigation
   useReaderKeyboard({
     renditionRef,
     onClose,
@@ -57,7 +56,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     onQuickPrompt: handleQuickPrompt,
   });
 
-  // Text selection listener
   useEffect(() => {
     const handleSelection = (e: Event) => {
       const customEvent = e as CustomEvent<{ text: string }>;
@@ -67,7 +65,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     return () => window.removeEventListener('reader-selection', handleSelection);
   }, []);
 
-  // Resize rendition when chat sidebar toggles
   useEffect(() => {
     if (!renditionRef.current || !isReady) return;
     const timer = setTimeout(() => {
@@ -76,7 +73,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     return () => clearTimeout(timer);
   }, [showChat, isReady, renditionRef]);
 
-  // Header hover behavior - show on trigger zone enter
   const handleHeaderTriggerEnter = useCallback(() => {
     setShowHeader(true);
     if (hideHeaderTimer.current) {
@@ -87,21 +83,18 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     }, 3000);
   }, []);
 
-  // Keep header visible when mouse is on header
   const handleHeaderMouseEnter = useCallback(() => {
     if (hideHeaderTimer.current) {
       clearTimeout(hideHeaderTimer.current);
     }
   }, []);
 
-  // Hide after 3s when mouse leaves header
   const handleHeaderMouseLeave = useCallback(() => {
     hideHeaderTimer.current = setTimeout(() => {
       setShowHeader(false);
     }, 3000);
   }, []);
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (hideHeaderTimer.current) {
@@ -110,7 +103,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     };
   }, []);
 
-  // Toggle TOC - click again to close
   const handleToggleToc = useCallback(() => {
     if (showToc) {
       setShowToc(false);
@@ -120,7 +112,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     }
   }, [showToc]);
 
-  // Toggle Chat - click again to close
   const handleToggleChat = useCallback(() => {
     if (showChat) {
       setShowChat(false);
@@ -130,7 +121,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     }
   }, [showChat]);
 
-  // Calculate content margins based on panel state
   const getContentLayout = () => {
     if (showToc) {
       return { 
@@ -158,7 +148,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
 
   const layout = getContentLayout();
 
-  // Recursive TOC renderer
   const renderTocItems = (items: NavItem[], level = 0) => {
     return items.map((item, index) => (
       <div key={index}>
@@ -184,13 +173,13 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-theme-base">
-      {/* Header Trigger Zone - Top edge only */}
+      {/* Header Trigger Zone */}
       <div 
         className="fixed top-0 left-0 right-0 h-[12px] z-50"
         onMouseEnter={handleHeaderTriggerEnter}
       />
 
-      {/* Primary Header - Slides from top, follows content layout */}
+      {/* Primary Header */}
       <header
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
@@ -203,7 +192,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
           right: layout.headerRight,
         }}
       >
-        {/* Toolbar - fills the available width */}
         <div 
           className={cn(
             "h-[53px] flex items-center justify-between px-4",
@@ -211,45 +199,42 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
           )}
           style={{ borderBottom: '0.5px solid var(--border-primary)' }}
         >
-          {/* Left: Close & TOC */}
           <div className="flex items-center gap-1">
-            <HeaderIconButton onClick={onClose} title="返回书库">
+            <HeaderIconButton onClick={onClose} title={t('reader.back') as string}>
               <ArrowLeft size={iconSize} />
             </HeaderIconButton>
             <HeaderIconButton 
               onClick={handleToggleToc} 
-              title={showToc ? "关闭目录" : "目录"} 
+              title={showToc ? (t('reader.close') as string) : (t('reader.toc') as string)}
               active={showToc}
             >
               <List size={iconSize} />
             </HeaderIconButton>
           </div>
 
-          {/* Center: Chapter Title */}
           <div className="flex-1 min-w-0 px-8">
             <h1 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary truncate text-center font-ui">
-              {currentChapter || '阅读中'}
+              {currentChapter || (t('reader.aiAssistant') as string)}
             </h1>
           </div>
 
-          {/* Right: Chat & Settings */}
           <div className="flex items-center gap-1">
             <HeaderIconButton 
               onClick={handleToggleChat} 
-              title={showChat ? "关闭阅读助手" : "阅读助手"} 
+              title={showChat ? (t('reader.close') as string) : (t('reader.aiAssistant') as string)}
               active={showChat}
               highlight={!!selectedText}
             >
               <MessageCircle size={iconSize} />
             </HeaderIconButton>
-            <HeaderIconButton onClick={() => setSettingsOpen(true)} title="设置">
+            <HeaderIconButton onClick={() => setSettingsOpen(true)} title={t('library.settings') as string}>
               <Settings size={iconSize} />
             </HeaderIconButton>
           </div>
         </div>
       </header>
 
-      {/* Reader Area - Dynamic margins */}
+      {/* Reader Area */}
       <div 
         ref={containerRef}
         tabIndex={0}
@@ -262,33 +247,31 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         <div ref={viewerRef} className="absolute inset-0 w-full h-full" />
       </div>
 
-      {/* Table of Contents Panel - Slide from left */}
+      {/* TOC Panel */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 w-[24%] max-w-[420px] min-w-[280px]",
-          "bg-theme-surface",
+          "bg-theme-base",
           "transition-transform duration-normal ease-out-custom",
           "flex flex-col",
           showToc ? "translate-x-0" : "-translate-x-full"
         )}
         style={{ borderRight: '0.5px solid var(--border-primary)' }}
       >
-        {/* TOC Header - Unified with Chat Header style */}
         <div className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
           <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
-            目录
+            {t('reader.toc') as string}
           </h2>
-          <HeaderIconButton onClick={() => setShowToc(false)} title="关闭">
+          <HeaderIconButton onClick={() => setShowToc(false)} title={t('reader.close') as string}>
             <X size={iconSize} />
           </HeaderIconButton>
         </div>
 
-        {/* TOC Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
           {toc.length > 0 ? (
             renderTocItems(toc)
           ) : (
-            <p className="text-sm text-theme-muted text-center py-8 font-ui">暂无目录</p>
+            <p className="text-sm text-theme-muted text-center py-8 font-ui">{t('reader.noToc') as string}</p>
           )}
         </div>
       </aside>
@@ -301,7 +284,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         />
       )}
 
-      {/* Chat Sidebar - Slide from right */}
+      {/* Chat Sidebar */}
       <ChatSidebar
         isOpen={showChat}
         onClose={() => setShowChat(false)}
@@ -314,7 +297,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   );
 };
 
-// Header Icon Button - larger hit area
 interface HeaderIconButtonProps {
   onClick: () => void;
   children: React.ReactNode;
