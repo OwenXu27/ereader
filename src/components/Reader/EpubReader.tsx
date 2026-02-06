@@ -127,7 +127,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         marginLeft: '24%', 
         marginRight: '0%',
         headerLeft: '24%',
-        headerRight: '24%'
+        headerRight: '0%'
       };
     }
     if (showChat) {
@@ -173,18 +173,19 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-theme-base">
-      {/* Header Trigger Zone */}
+      {/* Header Trigger Zone - Follows content layout */}
       <div 
-        className="fixed top-0 left-0 right-0 h-[12px] z-50"
+        className="fixed top-0 h-[12px] z-50 transition-all duration-slow ease-out-custom"
+        style={{ left: layout.headerLeft, right: layout.headerRight }}
         onMouseEnter={handleHeaderTriggerEnter}
       />
 
-      {/* Primary Header */}
+      {/* Primary Header - Follows content layout */}
       <header
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
         className={cn(
-          "fixed top-0 z-40 transition-transform duration-normal ease-out-custom",
+          "fixed top-0 z-40 transition-all duration-slow ease-out-custom",
           showHeader ? "translate-y-0" : "-translate-y-full"
         )}
         style={{
