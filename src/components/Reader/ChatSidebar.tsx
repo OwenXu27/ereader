@@ -191,13 +191,15 @@ export const ChatSidebar = ({
         <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
           {t('reader.aiAssistant') as string}
         </h2>
+        {/* Close button - refined hover */}
         <button
           onClick={onClose}
           className={cn(
             "w-9 h-9 flex items-center justify-center rounded-md",
-            "text-theme-secondary hover:text-theme-primary",
-            "hover:bg-theme-elevated active:scale-95",
-            "transition-all duration-fast ease-out-custom"
+            "text-theme-secondary",
+            "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated/60",
+            "active:scale-95 active:bg-theme-elevated/80"
           )}
           title={t('reader.close') as string}
           type="button"
@@ -284,7 +286,8 @@ export const ChatSidebar = ({
           "flex flex-col gap-2 rounded-lg border px-3 py-2.5",
           "bg-theme-input",
           hasContent && "border-warm-500/50",
-          "transition-colors duration-fast"
+          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "hover:border-theme-muted/30"
         )} style={{ borderWidth: '0.5px', borderColor: hasContent ? undefined : 'var(--border-primary)' }}>
           {/* Quote Bar */}
           {quotedText && (
@@ -302,8 +305,11 @@ export const ChatSidebar = ({
                   onClearSelection();
                 }}
                 className={cn(
-                  "flex-shrink-0 rounded p-0.5 transition-colors",
-                  "text-theme-muted hover:text-theme-primary"
+                  "flex-shrink-0 rounded p-0.5",
+                  "text-theme-muted",
+                  "transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                  "hover:scale-110 hover:text-theme-primary hover:bg-theme-elevated",
+                  "active:scale-95"
                 )}
                 title={isQuoteHover ? "清除引用" : "引用"}
               >
@@ -337,23 +343,22 @@ export const ChatSidebar = ({
   );
 };
 
-// Quick Prompt Button Component
-interface QuickPromptButtonProps {
+// Quick Prompt Button Component - Refined hover
+const QuickPromptButton = ({ label, onClick, disabled }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
-}
-
-const QuickPromptButton = ({ label, onClick, disabled }: QuickPromptButtonProps) => (
+}) => (
   <button 
     onClick={onClick}
     disabled={disabled}
     className={cn(
       "w-full px-3 py-2 rounded-md text-xs text-left font-ui",
       "bg-theme-elevated text-theme-secondary",
-      "hover:bg-theme-surface hover:text-theme-primary",
-      "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-theme-elevated",
-      "transition-all duration-fast"
+      "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+      "hover:scale-[1.01] hover:bg-theme-surface hover:text-theme-primary hover:shadow-sm",
+      "active:scale-[0.99] active:bg-theme-elevated",
+      "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-theme-elevated disabled:hover:shadow-none"
     )}
   >
     {label}

@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { NavItem } from 'epubjs';
 import { useBookStore } from '../../store/useBookStore';
 import { useTranslation } from '../../i18n';
-import { useTheme } from '../../hooks/useTheme';
 import { useEpubReader } from '../../hooks/useEpubReader';
 import { useReaderKeyboard } from '../../hooks/useReaderKeyboard';
 import { Settings, ArrowLeft, List, X, MessageCircle } from 'lucide-react';
@@ -30,7 +29,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   const hideHeaderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setSettingsOpen } = useBookStore();
   const { t } = useTranslation();
-  const theme = useTheme();
 
   const {
     containerRef,
@@ -157,9 +155,11 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
             setShowToc(false);
           }}
           className={cn(
-            "w-full text-left py-2 px-3 rounded-md transition-all duration-fast text-sm font-ui",
-            theme.hover,
-            currentChapter === item.label && "font-medium bg-warm-500 text-white"
+            "w-full text-left py-2 px-3 rounded-md text-sm font-ui",
+            "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "hover:scale-[1.01] hover:bg-theme-elevated/60",
+            "active:scale-[0.99] active:bg-theme-elevated/80",
+            currentChapter === item.label && "font-medium bg-warm-500 text-white hover:bg-warm-500 hover:scale-100"
           )}
           style={{ paddingLeft: `${12 + level * 16}px` }}
         >
@@ -298,25 +298,28 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   );
 };
 
-interface HeaderIconButtonProps {
+// Header Icon Button - Refined hover states
+const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
   onClick: () => void;
   children: React.ReactNode;
   title?: string;
   active?: boolean;
   highlight?: boolean;
-}
-
-const HeaderIconButton = ({ onClick, children, title, active, highlight }: HeaderIconButtonProps) => (
+}) => (
   <button
     onClick={onClick}
     title={title}
     className={cn(
       "w-9 h-9 flex items-center justify-center rounded-md",
-      "transition-all duration-fast ease-out-custom",
-      "text-theme-secondary hover:text-theme-primary",
-      active && "bg-warm-500 text-white",
-      highlight && "bg-theme-primary text-theme-base",
-      "hover:bg-theme-elevated active:scale-95"
+      "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+      "hover:scale-105 active:scale-95",
+      active && "bg-warm-500 text-white hover:scale-105 hover:bg-warm-500",
+      highlight && "bg-theme-primary text-theme-base hover:scale-105 hover:bg-theme-primary",
+      !active && !highlight && [
+        "text-theme-secondary",
+        "hover:text-theme-primary hover:bg-theme-elevated/60",
+        "active:bg-theme-elevated/80"
+      ]
     )}
   >
     {children}

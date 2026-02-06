@@ -54,12 +54,15 @@ export const SettingsPanel: React.FC = () => {
                     {t('settings.subtitle') as string}
                   </p>
                 </div>
+                {/* Close button - refined hover */}
                 <button 
                   onClick={() => setSettingsOpen(false)} 
                   className={cn(
                     "w-8 h-8 flex items-center justify-center rounded-full",
-                    "text-theme-muted hover:text-theme-primary hover:bg-theme-elevated/50",
-                    "transition-all duration-200 ease-out"
+                    "text-theme-muted",
+                    "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                    "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated/60",
+                    "active:scale-95 active:bg-theme-elevated/80"
                   )}
                 >
                   <X size={15} strokeWidth={1.5} />
@@ -178,7 +181,8 @@ export const SettingsPanel: React.FC = () => {
                           "w-full px-3 py-2 text-[12px] rounded-md",
                           "bg-theme-elevated/50 text-theme-primary placeholder:text-theme-muted/40",
                           "focus:outline-none focus:bg-theme-elevated",
-                          "transition-all duration-200"
+                          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                          "hover:bg-theme-elevated/70"
                         )}
                         style={{ border: '0.5px solid var(--border-primary)' }}
                       />
@@ -200,7 +204,8 @@ export const SettingsPanel: React.FC = () => {
                           "w-full px-3 py-2 text-[12px] rounded-md",
                           "bg-theme-elevated/50 text-theme-primary placeholder:text-theme-muted/40",
                           "focus:outline-none focus:bg-theme-elevated",
-                          "transition-all duration-200"
+                          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                          "hover:bg-theme-elevated/70"
                         )}
                         style={{ border: '0.5px solid var(--border-primary)' }}
                       />
@@ -234,31 +239,40 @@ export const SettingsPanel: React.FC = () => {
   );
 };
 
-// Language Option Component
-interface LanguageOptionProps {
+// Section Header Component
+const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  <div className="flex items-center gap-2 text-theme-muted/70">
+    <span className="opacity-70">{icon}</span>
+    <span className="text-[10px] uppercase tracking-[0.1em] font-medium">{label}</span>
+  </div>
+);
+
+// Language Option Component - Refined hover
+const LanguageOption = ({ code, label, current, onClick }: {
   code: Language;
   label: string;
   current: Language;
   onClick: () => void;
-}
-
-const LanguageOption = ({ code, label, current, onClick }: LanguageOptionProps) => {
+}) => {
   const isActive = current === code;
   
   return (
     <button
       onClick={onClick}
       className={cn(
-        "relative py-2.5 px-3 rounded-md text-[12px] transition-all duration-200",
+        "relative py-2.5 px-3 rounded-md text-[12px]",
         "flex items-center justify-center gap-2",
+        "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "hover:scale-[1.02] active:scale-[0.98]",
         isActive 
           ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/30"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40"
       )}
       style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
     >
       <span className={cn(
         "w-4 h-4 rounded-full border text-[9px] flex items-center justify-center",
+        "transition-all duration-200",
         isActive ? "border-warm-500 text-warm-500" : "border-theme-muted/30 text-theme-muted/50"
       )}>
         {code.toUpperCase()}
@@ -271,23 +285,13 @@ const LanguageOption = ({ code, label, current, onClick }: LanguageOptionProps) 
   );
 };
 
-// Section Header Component
-const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div className="flex items-center gap-2 text-theme-muted/70">
-    <span className="opacity-70">{icon}</span>
-    <span className="text-[10px] uppercase tracking-[0.1em] font-medium">{label}</span>
-  </div>
-);
-
-// Theme Option Component
-interface ThemeOptionProps {
+// Theme Option Component - Refined hover
+const ThemeOption = ({ theme, currentTheme, onClick, label }: {
   theme: ThemeType;
   currentTheme: ThemeType;
   onClick: () => void;
   label: string;
-}
-
-const ThemeOption = ({ theme, currentTheme, onClick, label }: ThemeOptionProps) => {
+}) => {
   const isActive = currentTheme === theme;
   
   const themeBg = {
@@ -300,18 +304,20 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: ThemeOptionProps) 
     <button
       onClick={onClick}
       className={cn(
-        "relative py-3 rounded-md text-[12px] transition-all duration-200",
+        "relative py-3 rounded-md text-[12px]",
         "flex flex-col items-center gap-2",
+        "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "hover:scale-[1.02] active:scale-[0.98]",
         isActive 
           ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/30"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40"
       )}
       style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
     >
       <div className={cn(
-        "w-6 h-6 rounded-full border",
+        "w-6 h-6 rounded-full border transition-all duration-200",
         themeBg[theme],
-        isActive ? "border-warm-500" : "border-theme-muted/20"
+        isActive ? "border-warm-500 scale-110" : "border-theme-muted/20 hover:border-theme-muted/40"
       )} />
       <span>{label}</span>
       {isActive && (
@@ -321,15 +327,13 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: ThemeOptionProps) 
   );
 };
 
-// Minimal Switch Component
-interface SwitchProps {
+// Minimal Switch Component - Refined
+const MinimalSwitch = ({ checked, onChange, variant = 'default' }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   variant?: 'default' | 'warning';
-}
-
-const MinimalSwitch = ({ checked, onChange, variant = 'default' }: SwitchProps) => (
-  <label className="relative inline-flex items-center cursor-pointer">
+}) => (
+  <label className="relative inline-flex items-center cursor-pointer group">
     <input 
       type="checkbox" 
       checked={checked}
@@ -338,17 +342,19 @@ const MinimalSwitch = ({ checked, onChange, variant = 'default' }: SwitchProps) 
     />
     <div 
       className={cn(
-        "w-9 h-5 rounded-full transition-all duration-200",
+        "w-9 h-5 rounded-full transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
         "bg-theme-elevated peer-checked:bg-warm-500",
+        "group-hover:shadow-sm",
         variant === 'warning' && checked && "peer-checked:bg-amber-500"
       )}
       style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
     >
       <div className={cn(
         "absolute top-[2px] left-[2px]",
-        "w-4 h-4 rounded-full bg-white transition-all duration-200 ease-out",
+        "w-4 h-4 rounded-full bg-white transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
         "shadow-sm",
-        checked ? "translate-x-4" : "translate-x-0"
+        checked ? "translate-x-4" : "translate-x-0",
+        "group-hover:shadow-md"
       )} />
     </div>
   </label>

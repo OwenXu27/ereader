@@ -227,32 +227,33 @@ export const Library: React.FC = () => {
   );
 };
 
-// Icon Button Component
-interface IconButtonProps {
+// Icon Button Component - Refined hover states
+const IconButton = ({ onClick, children, title, disabled, variant = 'default' }: {
   onClick: () => void;
   children: React.ReactNode;
   title?: string;
   disabled?: boolean;
   variant?: 'default' | 'primary';
-}
-
-const IconButton = ({ onClick, children, title, disabled, variant = 'default' }: IconButtonProps) => (
+}) => (
   <button
     onClick={onClick}
     disabled={disabled}
     title={title}
     className={cn(
       "w-9 h-9 flex items-center justify-center rounded-full",
-      "transition-all duration-200 ease-out",
-      "disabled:opacity-40 disabled:cursor-not-allowed",
+      "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+      "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100",
+      "hover:scale-105 active:scale-95",
       variant === 'default' && [
-        "text-theme-muted hover:text-theme-primary",
-        "hover:bg-theme-elevated/50"
+        "text-theme-muted",
+        "hover:text-theme-primary hover:bg-theme-elevated/60",
+        "active:bg-theme-elevated/80"
       ],
       variant === 'primary' && [
         "bg-theme-elevated text-theme-primary",
         "hover:bg-warm-500 hover:text-white",
-        "shadow-sm hover:shadow-md"
+        "shadow-sm hover:shadow-lg hover:shadow-warm-500/25",
+        "active:bg-warm-600 active:shadow-md"
       ]
     )}
   >
@@ -279,8 +280,8 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
     onClick={onClick}
     className={cn(
       "group relative aspect-[2/3] cursor-pointer",
-      "transition-all duration-500 ease-out",
-      "hover:scale-[1.02] hover:-translate-y-1",
+      "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
+      "hover:scale-[1.03] hover:-translate-y-1.5",
       "active:scale-[0.98] active:duration-200"
     )}
     style={{ 
@@ -309,16 +310,17 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
       </div>
     )}
     
-    {/* Delete Button - Appears on hover with delay */}
+    {/* Delete Button - Refined hover */}
     <button 
       onClick={onRemove}
       className={cn(
         "absolute top-2 right-2 w-7 h-7 flex items-center justify-center",
-        "bg-theme-base/80 backdrop-blur-sm text-theme-muted rounded-full",
-        "opacity-0 translate-y-1",
-        "group-hover:opacity-100 group-hover:translate-y-0",
-        "transition-all duration-200 ease-out delay-100",
-        "hover:bg-theme-base hover:text-theme-primary"
+        "bg-theme-base/90 backdrop-blur-sm text-theme-muted rounded-full",
+        "opacity-0 translate-y-1 scale-90",
+        "group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100",
+        "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] delay-75",
+        "hover:bg-theme-base hover:text-theme-primary hover:shadow-md",
+        "active:scale-90 active:bg-theme-elevated"
       )}
     >
       <X size={13} strokeWidth={1.5} />
@@ -355,14 +357,16 @@ const EmptyState = ({ onAdd, t }: EmptyStateProps) => (
     <p className="text-[13px] text-theme-primary/80 mb-1">{t('library.empty') as string}</p>
     <p className="text-[11px] text-theme-muted/60 mb-6">{t('library.emptyHint') as string}</p>
 
-    {/* Action */}
+    {/* Action - Refined button */}
     <button
       onClick={onAdd}
       className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-full",
-        "bg-theme-elevated text-theme-secondary text-[11px]",
-        "hover:bg-warm-500 hover:text-white",
-        "transition-all duration-300 ease-out",
+        "flex items-center gap-2 px-4 py-2.5 rounded-full",
+        "bg-theme-elevated text-theme-secondary text-[11px] font-medium",
+        "shadow-sm hover:shadow-md",
+        "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "hover:bg-warm-500 hover:text-white hover:shadow-warm-500/25 hover:scale-105",
+        "active:scale-95 active:bg-warm-600 active:shadow-sm",
         "group"
       )}
     >
