@@ -37,7 +37,7 @@ export const SettingsPanel: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }}
             transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-            className="bg-theme-base w-full max-w-sm overflow-hidden"
+            className="bg-theme-base w-full max-w-sm overflow-hidden font-ui"
             style={{ 
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 0.5px var(--border-primary)'
             }}
@@ -172,20 +172,28 @@ export const SettingsPanel: React.FC = () => {
                         <Globe size={11} strokeWidth={1.5} className="opacity-50" />
                         {t('settings.apiUrl') as string}
                       </label>
-                      <input 
-                        type="text"
-                        value={settings.apiUrl}
-                        onChange={(e) => updateSettings({ apiUrl: e.target.value })}
-                        placeholder="http://localhost:5177/api/chat/completions"
+                      <div
                         className={cn(
-                          "w-full px-3 py-2 text-[12px] rounded-md",
-                          "bg-theme-elevated/50 text-theme-primary placeholder:text-theme-muted/40",
-                          "focus:outline-none focus:bg-theme-elevated",
+                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "bg-theme-input",
+                          settings.apiUrl && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                          "hover:bg-theme-elevated/70"
+                          "hover:border-theme-muted/30"
                         )}
-                        style={{ border: '0.5px solid var(--border-primary)' }}
-                      />
+                        style={{ borderWidth: '0.5px', borderColor: settings.apiUrl ? undefined : 'var(--border-primary)' }}
+                      >
+                        <input 
+                          type="text"
+                          value={settings.apiUrl}
+                          onChange={(e) => updateSettings({ apiUrl: e.target.value })}
+                          placeholder="http://localhost:5177/api/chat/completions"
+                          className={cn(
+                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "focus:outline-none"
+                          )}
+                        />
+                      </div>
                       <p className="text-[10px] text-theme-muted/50 leading-relaxed">
                         {t('settings.apiUrlHint') as string}
                       </p>
@@ -195,20 +203,28 @@ export const SettingsPanel: React.FC = () => {
                         <ShieldAlert size={11} strokeWidth={1.5} className="opacity-50" />
                         {t('settings.apiKey') as string}
                       </label>
-                      <input 
-                        type="password"
-                        value={settings.apiKey}
-                        onChange={(e) => updateSettings({ apiKey: e.target.value })}
-                        placeholder="sk-..."
+                      <div
                         className={cn(
-                          "w-full px-3 py-2 text-[12px] rounded-md",
-                          "bg-theme-elevated/50 text-theme-primary placeholder:text-theme-muted/40",
-                          "focus:outline-none focus:bg-theme-elevated",
+                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "bg-theme-input",
+                          settings.apiKey && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                          "hover:bg-theme-elevated/70"
+                          "hover:border-theme-muted/30"
                         )}
-                        style={{ border: '0.5px solid var(--border-primary)' }}
-                      />
+                        style={{ borderWidth: '0.5px', borderColor: settings.apiKey ? undefined : 'var(--border-primary)' }}
+                      >
+                        <input 
+                          type="password"
+                          value={settings.apiKey}
+                          onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                          placeholder="sk-..."
+                          className={cn(
+                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "focus:outline-none"
+                          )}
+                        />
+                      </div>
                       <p className="text-[10px] text-theme-muted/50">
                         {t('settings.apiKeyHint') as string}
                       </p>
@@ -247,7 +263,7 @@ const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }
   </div>
 );
 
-// Language Option Component - Refined hover
+// Language Option Component - Enhanced click feedback
 const LanguageOption = ({ code, label, current, onClick }: {
   code: Language;
   label: string;
@@ -262,30 +278,31 @@ const LanguageOption = ({ code, label, current, onClick }: {
       className={cn(
         "relative py-2.5 px-3 rounded-md text-[12px]",
         "flex items-center justify-center gap-2",
-        "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-        "hover:scale-[1.02] active:scale-[0.98]",
+        "transition-all duration-150 ease-out",
+        "hover:scale-[1.02]",
+        "active:scale-[0.96] active:duration-75",
         isActive 
           ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
       style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
     >
       <span className={cn(
         "w-4 h-4 rounded-full border text-[9px] flex items-center justify-center",
-        "transition-all duration-200",
-        isActive ? "border-warm-500 text-warm-500" : "border-theme-muted/30 text-theme-muted/50"
+        "transition-all duration-150",
+        isActive ? "border-warm-500 text-warm-500 scale-110" : "border-theme-muted/30 text-theme-muted/50"
       )}>
         {code.toUpperCase()}
       </span>
-      <span>{label}</span>
+      <span className="transition-transform duration-150">{label}</span>
       {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500" />
+        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
       )}
     </button>
   );
 };
 
-// Theme Option Component - Refined hover
+// Theme Option Component - Enhanced click feedback
 const ThemeOption = ({ theme, currentTheme, onClick, label }: {
   theme: ThemeType;
   currentTheme: ThemeType;
@@ -306,22 +323,23 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
       className={cn(
         "relative py-3 rounded-md text-[12px]",
         "flex flex-col items-center gap-2",
-        "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-        "hover:scale-[1.02] active:scale-[0.98]",
+        "transition-all duration-150 ease-out",
+        "hover:scale-[1.02]",
+        "active:scale-[0.96] active:duration-75",
         isActive 
           ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
       style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
     >
       <div className={cn(
-        "w-6 h-6 rounded-full border transition-all duration-200",
+        "w-6 h-6 rounded-full border transition-all duration-150",
         themeBg[theme],
-        isActive ? "border-warm-500 scale-110" : "border-theme-muted/20 hover:border-theme-muted/40"
+        isActive ? "border-warm-500 scale-110" : "border-theme-muted/20 hover:border-theme-muted/40 active:scale-95"
       )} />
-      <span>{label}</span>
+      <span className="transition-transform duration-150">{label}</span>
       {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500" />
+        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
       )}
     </button>
   );

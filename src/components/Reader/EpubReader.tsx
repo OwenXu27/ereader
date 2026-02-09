@@ -298,7 +298,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   );
 };
 
-// Header Icon Button - Refined hover states
+// Header Icon Button - Icon color only on active, bg on hover
 const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
   onClick: () => void;
   children: React.ReactNode;
@@ -313,8 +313,10 @@ const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
       "w-9 h-9 flex items-center justify-center rounded-md",
       "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
       "hover:scale-105 active:scale-95",
-      active && "bg-warm-500 text-white hover:scale-105 hover:bg-warm-500",
-      highlight && "bg-theme-primary text-theme-base hover:scale-105 hover:bg-theme-primary",
+      // 选中时只改变图标颜色，不改变背景
+      active && "text-warm-500 hover:bg-theme-elevated/60",
+      highlight && "text-theme-primary hover:bg-theme-elevated/60",
+      // 默认状态
       !active && !highlight && [
         "text-theme-secondary",
         "hover:text-theme-primary hover:bg-theme-elevated/60",
