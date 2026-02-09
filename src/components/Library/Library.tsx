@@ -279,7 +279,7 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
   <div 
     onClick={onClick}
     className={cn(
-      "group relative aspect-[2/3] cursor-pointer rounded-[4px]",
+      "group relative aspect-[2/3] cursor-pointer rounded-[4px] overflow-hidden",
       "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
       "hover:scale-[1.03] hover:-translate-y-1.5",
       "active:scale-[0.98] active:duration-200"
@@ -328,7 +328,7 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
 
     {/* Hover overlay - subtle */}
     <div className={cn(
-      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent rounded-[4px]",
+      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent",
       "opacity-0 group-hover:opacity-100",
       "transition-opacity duration-300 pointer-events-none"
     )} />

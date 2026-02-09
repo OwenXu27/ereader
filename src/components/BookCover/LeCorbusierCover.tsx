@@ -307,7 +307,7 @@ export const LeCorbusierCover: React.FC<LeCorbusierCoverProps> = ({
 
   return (
     <div 
-      className="relative w-full h-full overflow-hidden rounded-[4px]"
+      className="relative w-full h-full overflow-hidden"
       style={{ 
         backgroundColor: primary.bg,
         fontFamily: 'Georgia, "Times New Roman", Times, serif',
