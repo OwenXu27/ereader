@@ -3,6 +3,95 @@
 @tailwind utilities;
 
 /* ============================================
+   Geist Font Face Definitions
+   ============================================ */
+
+/* Geist Sans - Variable Font */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Italic[wght].woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Geist Mono - Variable Font */
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Italic[wght].woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Geist Pixel - Shape Variants */
+@font-face {
+  font-family: 'Geist Pixel Square';
+  src: url('/fonts/GeistPixel-Square.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Pixel Circle';
+  src: url('/fonts/GeistPixel-Circle.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Pixel Grid';
+  src: url('/fonts/GeistPixel-Grid.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Pixel Line';
+  src: url('/fonts/GeistPixel-Line.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Pixel Triangle';
+  src: url('/fonts/GeistPixel-Triangle.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Define CSS variables for UI fonts */
+:root {
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  --font-pixel: 'Geist Pixel Square', 'Geist Mono', monospace;
+  
+  /* Default UI font */
+  --font-ui: var(--font-sans);
+}
+
+/* ============================================
    CSS Variables - Theme System
    ============================================ */
 

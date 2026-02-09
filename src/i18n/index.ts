@@ -45,6 +45,26 @@ const translations = {
         zh: '中文',
         en: 'English',
       },
+      uiFont: 'UI 字体',
+      uiFontWeight: '字重',
+      uiFonts: {
+        sans: 'Sans',
+        mono: 'Mono',
+        pixel: 'Pixel',
+      },
+      uiPixelStyle: 'Pixel 样式',
+      uiPixelStyles: {
+        square: 'Square',
+        circle: 'Circle',
+        grid: 'Grid',
+        line: 'Line',
+        triangle: 'Triangle',
+      },
+      uiFontWeights: {
+        normal: 'Regular',
+        medium: 'Medium',
+        semibold: 'Semibold',
+      },
     },
     // Reader
     reader: {
@@ -111,6 +131,26 @@ const translations = {
       languageLabel: {
         zh: '中文',
         en: 'English',
+      },
+      uiFont: 'UI Font',
+      uiFontWeight: 'Weight',
+      uiFonts: {
+        sans: 'Sans',
+        mono: 'Mono',
+        pixel: 'Pixel',
+      },
+      uiFontWeights: {
+        normal: 'Regular',
+        medium: 'Medium',
+        semibold: 'Semibold',
+      },
+      uiPixelStyle: 'Pixel Style',
+      uiPixelStyles: {
+        square: 'Square',
+        circle: 'Circle',
+        grid: 'Grid',
+        line: 'Line',
+        triangle: 'Triangle',
       },
     },
     // Reader

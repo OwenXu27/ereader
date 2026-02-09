@@ -2,10 +2,17 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Book } from '../services/db';
 
+export type UIFontFamily = 'sans' | 'mono' | 'pixel';
+export type UIFontWeight = 'normal' | 'medium' | 'semibold';
+export type UIFontPixelStyle = 'square' | 'circle' | 'grid' | 'line' | 'triangle';
+
 interface Settings {
   theme: 'light' | 'dark' | 'sepia';
   fontSize: number;
   fontFamily: string;
+  uiFontFamily: UIFontFamily;
+  uiFontWeight: UIFontWeight;
+  uiFontPixelStyle: UIFontPixelStyle;
   translationEnabled: boolean;
   apiUrl: string;
   apiKey: string;
@@ -55,6 +62,9 @@ export const useBookStore = create<ReaderState>()(
         theme: 'light',
         fontSize: 17,
         fontFamily: 'serif',
+        uiFontFamily: 'sans',
+        uiFontWeight: 'normal',
+        uiFontPixelStyle: 'square',
         translationEnabled: false,
         apiUrl: '',
         apiKey: '',
@@ -106,6 +116,9 @@ export const useBookStore = create<ReaderState>()(
           theme: state.settings.theme,
           fontSize: state.settings.fontSize,
           fontFamily: state.settings.fontFamily,
+          uiFontFamily: state.settings.uiFontFamily,
+          uiFontWeight: state.settings.uiFontWeight,
+          uiFontPixelStyle: state.settings.uiFontPixelStyle,
           translationEnabled: state.settings.translationEnabled,
           allowScriptedContent: state.settings.allowScriptedContent,
           apiUrl: state.settings.apiUrl,

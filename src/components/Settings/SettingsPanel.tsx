@@ -1,8 +1,8 @@
 import React from 'react';
-import { useBookStore } from '../../store/useBookStore';
+import { useBookStore, type UIFontFamily, type UIFontWeight, type UIFontPixelStyle } from '../../store/useBookStore';
 import { useTranslation, type Language } from '../../i18n';
 import type { ThemeType } from '../../hooks/useTheme';
-import { X, Globe, ShieldAlert, Sun, Type, Sparkles, AlertCircle, Languages } from 'lucide-react';
+import { X, Globe, ShieldAlert, Sun, Type, Sparkles, AlertCircle, Languages, Palette, Weight, Shapes } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -92,6 +92,99 @@ export const SettingsPanel: React.FC = () => {
                   />
                 </div>
               </section>
+
+              {/* UI Font Section - Only show for English */}
+              {language === 'en' && (
+                <section>
+                  <SectionHeader icon={<Palette size={13} strokeWidth={1.5} />} label={t('settings.uiFont') as string} />
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <FontFamilyOption
+                      family="sans"
+                      label={(t('settings.uiFonts.sans') as string)}
+                      current={settings.uiFontFamily}
+                      onClick={() => updateSettings({ uiFontFamily: 'sans' })}
+                    />
+                    <FontFamilyOption
+                      family="mono"
+                      label={(t('settings.uiFonts.mono') as string)}
+                      current={settings.uiFontFamily}
+                      onClick={() => updateSettings({ uiFontFamily: 'mono' })}
+                    />
+                    <FontFamilyOption
+                      family="pixel"
+                      label={(t('settings.uiFonts.pixel') as string)}
+                      current={settings.uiFontFamily}
+                      onClick={() => updateSettings({ uiFontFamily: 'pixel' })}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {/* UI Font Weight Section - Only show for English and non-pixel fonts */}
+              {language === 'en' && settings.uiFontFamily !== 'pixel' && (
+                <section>
+                  <SectionHeader icon={<Weight size={13} strokeWidth={1.5} />} label={t('settings.uiFontWeight') as string} />
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <FontWeightOption
+                      weight="normal"
+                      label={(t('settings.uiFontWeights.normal') as string)}
+                      current={settings.uiFontWeight}
+                      onClick={() => updateSettings({ uiFontWeight: 'normal' })}
+                    />
+                    <FontWeightOption
+                      weight="medium"
+                      label={(t('settings.uiFontWeights.medium') as string)}
+                      current={settings.uiFontWeight}
+                      onClick={() => updateSettings({ uiFontWeight: 'medium' })}
+                    />
+                    <FontWeightOption
+                      weight="semibold"
+                      label={(t('settings.uiFontWeights.semibold') as string)}
+                      current={settings.uiFontWeight}
+                      onClick={() => updateSettings({ uiFontWeight: 'semibold' })}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {/* UI Pixel Style Section - Only show for English and pixel font */}
+              {language === 'en' && settings.uiFontFamily === 'pixel' && (
+                <section>
+                  <SectionHeader icon={<Shapes size={13} strokeWidth={1.5} />} label={t('settings.uiPixelStyle') as string} />
+                  <div className="mt-3 grid grid-cols-5 gap-2">
+                    <PixelStyleOption
+                      style="square"
+                      label={(t('settings.uiPixelStyles.square') as string)}
+                      current={settings.uiFontPixelStyle}
+                      onClick={() => updateSettings({ uiFontPixelStyle: 'square' })}
+                    />
+                    <PixelStyleOption
+                      style="circle"
+                      label={(t('settings.uiPixelStyles.circle') as string)}
+                      current={settings.uiFontPixelStyle}
+                      onClick={() => updateSettings({ uiFontPixelStyle: 'circle' })}
+                    />
+                    <PixelStyleOption
+                      style="grid"
+                      label={(t('settings.uiPixelStyles.grid') as string)}
+                      current={settings.uiFontPixelStyle}
+                      onClick={() => updateSettings({ uiFontPixelStyle: 'grid' })}
+                    />
+                    <PixelStyleOption
+                      style="line"
+                      label={(t('settings.uiPixelStyles.line') as string)}
+                      current={settings.uiFontPixelStyle}
+                      onClick={() => updateSettings({ uiFontPixelStyle: 'line' })}
+                    />
+                    <PixelStyleOption
+                      style="triangle"
+                      label={(t('settings.uiPixelStyles.triangle') as string)}
+                      current={settings.uiFontPixelStyle}
+                      onClick={() => updateSettings({ uiFontPixelStyle: 'triangle' })}
+                    />
+                  </div>
+                </section>
+              )}
 
               {/* Theme Section */}
               <section>
@@ -276,7 +369,7 @@ const LanguageOption = ({ code, label, current, onClick }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-2.5 px-3 rounded-md text-[12px]",
+        "relative py-2.5 px-3 rounded-[4px] text-[12px]",
         "flex items-center justify-center gap-2",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -321,7 +414,7 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-3 rounded-md text-[12px]",
+        "relative py-3 rounded-[4px] text-[12px]",
         "flex flex-col items-center gap-2",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -340,6 +433,125 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
       <span className="transition-transform duration-150">{label}</span>
       {isActive && (
         <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
+      )}
+    </button>
+  );
+};
+
+// Font Family Option Component
+const FontFamilyOption = ({ family, label, current, onClick }: {
+  family: UIFontFamily;
+  label: string;
+  current: UIFontFamily;
+  onClick: () => void;
+}) => {
+  const isActive = current === family;
+  
+  const fontClass = {
+    sans: 'font-sans',
+    mono: 'font-mono',
+    pixel: 'font-pixel-square',
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative py-2.5 px-3 rounded-[4px] text-[12px]",
+        "flex items-center justify-center",
+        "transition-all duration-150 ease-out",
+        "hover:scale-[1.02]",
+        "active:scale-[0.96] active:duration-75",
+        fontClass[family],
+        isActive 
+          ? "text-theme-primary bg-theme-elevated/80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+      )}
+      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+    >
+      <span className="transition-transform duration-150">{label}</span>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
+      )}
+    </button>
+  );
+};
+
+// Font Weight Option Component
+const FontWeightOption = ({ weight, label, current, onClick }: {
+  weight: UIFontWeight;
+  label: string;
+  current: UIFontWeight;
+  onClick: () => void;
+}) => {
+  const isActive = current === weight;
+  
+  const weightClass = {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    semibold: 'font-semibold',
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative py-2.5 px-3 rounded-md text-[12px]",
+        "flex items-center justify-center",
+        "transition-all duration-150 ease-out",
+        "hover:scale-[1.02]",
+        "active:scale-[0.96] active:duration-75",
+        weightClass[weight],
+        isActive 
+          ? "text-theme-primary bg-theme-elevated/80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+      )}
+      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+    >
+      <span className="transition-transform duration-150">{label}</span>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
+      )}
+    </button>
+  );
+};
+
+// Pixel Style Option Component
+const PixelStyleOption = ({ style, label, current, onClick }: {
+  style: UIFontPixelStyle;
+  label: string;
+  current: UIFontPixelStyle;
+  onClick: () => void;
+}) => {
+  const isActive = current === style;
+  
+  const styleClass = {
+    square: 'font-pixel-square',
+    circle: 'font-pixel-circle',
+    grid: 'font-pixel-grid',
+    line: 'font-pixel-line',
+    triangle: 'font-pixel-triangle',
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative py-2.5 px-1 rounded-[4px] text-[11px]",
+        "flex items-center justify-center",
+        "transition-all duration-150 ease-out",
+        "hover:scale-[1.02]",
+        "active:scale-[0.96] active:duration-75",
+        styleClass[style],
+        isActive 
+          ? "text-theme-primary bg-theme-elevated/80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+      )}
+      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+    >
+      <span className="transition-transform duration-150">{label}</span>
+      {isActive && (
+        <div className="absolute top-1 right-1 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
       )}
     </button>
   );

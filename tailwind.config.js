@@ -8,8 +8,13 @@ export default {
     extend: {
       fontFamily: {
         reading: ['"Source Serif 4"', 'Merriweather', 'Georgia', 'serif'],
-        ui: ['Inter', '"SF Pro Display"', '-apple-system', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+        ui: ['var(--font-ui)', 'Inter', '"SF Pro Display"', '-apple-system', 'sans-serif'],
+        mono: ['var(--font-mono)', '"JetBrains Mono"', '"Fira Code"', 'monospace'],
+        'pixel-square': ['"Geist Pixel Square"', 'monospace'],
+        'pixel-circle': ['"Geist Pixel Circle"', 'monospace'],
+        'pixel-grid': ['"Geist Pixel Grid"', 'monospace'],
+        'pixel-line': ['"Geist Pixel Line"', 'monospace'],
+        'pixel-triangle': ['"Geist Pixel Triangle"', 'monospace'],
       },
       colors: {
         // 纸张色系 - 护眼暖白
