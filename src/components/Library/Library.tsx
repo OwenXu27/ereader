@@ -328,7 +328,7 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
 
     {/* Hover overlay - subtle */}
     <div className={cn(
-      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent",
+      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent rounded-[4px]",
       "opacity-0 group-hover:opacity-100",
       "transition-opacity duration-300 pointer-events-none"
     )} />
