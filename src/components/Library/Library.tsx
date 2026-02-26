@@ -120,45 +120,22 @@ export const Library: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-theme-base font-ui selection:bg-warm-500/20">
-      {/* Header - Refined Swiss Style */}
+      {/* Header */}
       <header 
-        className="pt-8 pb-6 shrink-0"
+        className="pt-6 shrink-0"
         style={{ marginLeft: contentMargin, marginRight: contentMargin }}
       >
-        <div className="flex items-end justify-between">
-          {/* Left: Typography-focused Title Block */}
-          <div className="flex flex-col gap-1">
-            {/* Title Row */}
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-[15px] font-normal text-theme-primary tracking-[-0.02em]">
-                {t('library.title') as string}
-              </h1>
-              <span className="text-[12px] font-light tabular-nums text-theme-muted/50">
-                {fmtNum(books.length)}
-              </span>
-            </div>
-            
-            {/* Status Row - Condensed */}
-            {(readingCount > 0 || completedCount > 0) && (
-              <div className="flex items-center gap-3 text-[10px] tracking-[0.05em]">
-                {readingCount > 0 && (
-                  <span className="text-warm-500/90">
-                    {t('library.reading') as string} {fmtNum(readingCount)}
-                  </span>
-                )}
-                {readingCount > 0 && completedCount > 0 && (
-                  <span className="text-theme-muted/30">/</span>
-                )}
-                {completedCount > 0 && (
-                  <span className="text-theme-muted/50">
-                    {t('library.completed') as string} {fmtNum(completedCount)}
-                  </span>
-                )}
-              </div>
-            )}
+        {/* Primary bar — 53px, matches reader/TOC/chat headers */}
+        <div className="h-[53px] flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-[17px] font-medium text-theme-primary tracking-[-0.02em]">
+              {t('library.title') as string}
+            </h1>
+            <span className="text-[13px] tabular-nums text-theme-muted/60">
+              {fmtNum(books.length)}
+            </span>
           </div>
 
-          {/* Right: Action Cluster */}
           <div className="flex items-center gap-1">
             <IconButton 
               onClick={() => setSettingsOpen(true)} 
@@ -188,8 +165,26 @@ export const Library: React.FC = () => {
           </div>
         </div>
 
-        {/* Subtle bottom rule */}
-        <div className="mt-6 h-px bg-gradient-to-r from-theme-muted/20 via-theme-muted/10 to-transparent" />
+        {/* Status row */}
+        {(readingCount > 0 || completedCount > 0) && (
+          <div className="flex items-center gap-3 text-[11px] tracking-[0.05em] pb-1">
+            {readingCount > 0 && (
+              <span className="text-warm-500/90">
+                {t('library.reading') as string} {fmtNum(readingCount)}
+              </span>
+            )}
+            {readingCount > 0 && completedCount > 0 && (
+              <span className="text-theme-muted/30">/</span>
+            )}
+            {completedCount > 0 && (
+              <span className="text-theme-muted/50">
+                {t('library.completed') as string} {fmtNum(completedCount)}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 mb-6" style={{ borderBottom: '0.5px solid var(--border-primary)' }} />
       </header>
 
       {/* Content Area */}
@@ -204,7 +199,7 @@ export const Library: React.FC = () => {
       >
         {/* Error Message */}
         {error && (
-          <div className="mb-8 p-3 text-[11px] text-theme-primary bg-theme-elevated/30 rounded-sm border border-theme-muted/10 max-w-md animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mb-8 p-3 text-[11px] text-theme-primary bg-theme-elevated/30 rounded-md max-w-md animate-in fade-in slide-in-from-top-2 duration-300" style={{ border: '0.5px solid var(--border-primary)' }}>
             {error}
           </div>
         )}
@@ -261,7 +256,7 @@ export const Library: React.FC = () => {
                 <button
                   onClick={() => setDeleteTarget(null)}
                   className={cn(
-                    "px-3.5 py-1.5 rounded-full text-[11px] font-medium",
+                    "px-3.5 py-1.5 rounded-md text-[11px] font-medium",
                     "text-theme-secondary",
                     "transition-all duration-150",
                     "hover:bg-theme-elevated/60",
@@ -273,7 +268,7 @@ export const Library: React.FC = () => {
                 <button
                   onClick={confirmDelete}
                   className={cn(
-                    "px-3.5 py-1.5 rounded-full text-[11px] font-medium",
+                    "px-3.5 py-1.5 rounded-md text-[11px] font-medium",
                     "bg-red-500/10 text-red-600 dark:text-red-400",
                     "transition-all duration-150",
                     "hover:bg-red-500/20 hover:scale-105",
@@ -304,7 +299,7 @@ const IconButton = ({ onClick, children, title, disabled, variant = 'default' }:
     disabled={disabled}
     title={title}
     className={cn(
-      "w-9 h-9 flex items-center justify-center rounded-full",
+      "w-9 h-9 flex items-center justify-center rounded-md",
       "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
       "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100",
       "hover:scale-105 active:scale-95",
@@ -359,17 +354,17 @@ const BookCard = React.memo(({ book, index, onClick, onRemove }: BookCardProps) 
       author={book.author}
     />
     
-    {/* Progress Indicator - Minimal dot */}
+    {/* Progress Indicator */}
     {book.progress > 0 && (
       <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
-        <div className="flex-1 h-px bg-theme-base/40 overflow-hidden">
+        <div className="flex-1 h-[2.5px] bg-theme-base/50 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-warm-500 transition-all duration-700 ease-out"
+            className="h-full bg-warm-500 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${book.progress * 100}%` }} 
           />
         </div>
         {book.progress >= 1 && (
-          <div className="w-1 h-1 rounded-full bg-warm-500" />
+          <div className="w-1.5 h-1.5 rounded-full bg-warm-500" />
         )}
       </div>
     )}
@@ -409,7 +404,7 @@ const EmptyState = ({ onAdd, t }: EmptyStateProps) => (
   <div className="flex flex-col items-start justify-center min-h-[50vh] text-theme-muted">
     {/* Visual element */}
     <div className="mb-6 relative">
-      <div className="w-16 h-20 border border-dashed border-theme-muted/20 rounded-sm flex items-center justify-center">
+      <div className="w-16 h-20 rounded-md flex items-center justify-center" style={{ border: '0.5px dashed var(--border-primary)' }}>
         <BookIcon size={24} className="opacity-20" strokeWidth={1} />
       </div>
       {/* Decorative lines */}
@@ -425,7 +420,7 @@ const EmptyState = ({ onAdd, t }: EmptyStateProps) => (
     <button
       onClick={onAdd}
       className={cn(
-        "flex items-center gap-2 px-4 py-2.5 rounded-full",
+        "flex items-center gap-2 px-4 py-2.5 rounded-md",
         "bg-theme-elevated text-theme-secondary text-[11px] font-medium",
         "shadow-sm hover:shadow-md",
         "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",

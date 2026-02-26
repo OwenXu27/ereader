@@ -42,6 +42,7 @@ export function registerTranslationHandlers(
       p.setAttribute('data-translated', 'loading');
       const loader = doc.createElement('div');
       loader.className = 'translation-block';
+      loader.style.fontSize = '0.75em';
       loader.textContent = '翻译中...';
       p.appendChild(loader);
 

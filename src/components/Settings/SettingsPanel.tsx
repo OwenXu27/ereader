@@ -39,21 +39,20 @@ export const SettingsPanel: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 pt-6 pb-4">
+            <div className="px-6 pt-6 pb-4" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-[15px] font-normal text-theme-primary tracking-[-0.02em]">
                     {t('settings.title') as string}
                   </h2>
-                  <p className="text-[11px] text-theme-muted/60 mt-0.5 tracking-wide">
+                  <p className="text-[11px] text-theme-muted/70 mt-0.5 tracking-wide">
                     {t('settings.subtitle') as string}
                   </p>
                 </div>
-                {/* Close button - refined hover */}
                 <button 
                   onClick={() => setSettingsOpen(false)} 
                   className={cn(
-                    "w-8 h-8 flex items-center justify-center rounded-full",
+                    "w-8 h-8 flex items-center justify-center rounded-md",
                     "text-theme-muted",
                     "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
                     "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated/60",
@@ -229,7 +228,7 @@ export const SettingsPanel: React.FC = () => {
                     <span className="text-[11px] tabular-nums text-theme-primary">
                       {settings.fontSize}px
                     </span>
-                    <span className="text-[10px] text-theme-muted/50">
+                    <span className="text-[11px] text-theme-muted/50">
                       {getFontSizeLabel(settings.fontSize)}
                     </span>
                   </div>
@@ -281,7 +280,7 @@ export const SettingsPanel: React.FC = () => {
                           )}
                         />
                       </div>
-                      <p className="text-[10px] text-theme-muted/50 leading-relaxed">
+                      <p className="text-[11px] text-theme-muted/50 leading-relaxed">
                         {t('settings.apiUrlHint') as string}
                       </p>
                     </div>
@@ -312,7 +311,7 @@ export const SettingsPanel: React.FC = () => {
                           )}
                         />
                       </div>
-                      <p className="text-[10px] text-theme-muted/50">
+                      <p className="text-[11px] text-theme-muted/50">
                         {t('settings.apiKeyHint') as string}
                       </p>
                     </div>
@@ -330,7 +329,7 @@ export const SettingsPanel: React.FC = () => {
                     variant="warning"
                   />
                 </div>
-                <p className="mt-2 text-[10px] text-theme-muted/50 leading-relaxed">
+                <p className="mt-2 text-[11px] text-theme-muted/50 leading-relaxed">
                   {t('settings.scriptWarning') as string}
                 </p>
               </section>
@@ -346,7 +345,7 @@ export const SettingsPanel: React.FC = () => {
 const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
   <div className="flex items-center gap-2 text-theme-muted/70">
     <span className="opacity-70">{icon}</span>
-    <span className="text-[10px] uppercase tracking-[0.1em] font-medium">{label}</span>
+    <span className="text-[11px] uppercase tracking-[0.1em] font-medium">{label}</span>
   </div>
 );
 
@@ -363,7 +362,7 @@ const LanguageOption = ({ code, label, current, onClick }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-2.5 px-3 rounded-[4px] text-[12px]",
+        "relative py-2.5 px-3 rounded-md text-[12px]",
         "flex items-center justify-center gap-2",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -372,19 +371,19 @@ const LanguageOption = ({ code, label, current, onClick }: {
           ? "text-theme-primary bg-theme-elevated/80"
           : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
-      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+      style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
-      <span className={cn(
-        "w-4 h-4 rounded-full border text-[9px] flex items-center justify-center",
-        "transition-all duration-150",
-        isActive ? "border-warm-500 text-warm-500 scale-110" : "border-theme-muted/30 text-theme-muted/50"
-      )}>
+      <span
+        className={cn(
+          "w-4 h-4 rounded-full text-[9px] flex items-center justify-center",
+          "transition-all duration-150",
+          isActive ? "text-warm-500 scale-110" : "text-theme-muted/50"
+        )}
+        style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
+      >
         {code.toUpperCase()}
       </span>
       <span className="transition-transform duration-150">{label}</span>
-      {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
-      )}
     </button>
   );
 };
@@ -408,7 +407,7 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-3 rounded-[4px] text-[12px]",
+        "relative py-3 rounded-md text-[12px]",
         "flex flex-col items-center gap-2",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -417,17 +416,17 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
           ? "text-theme-primary bg-theme-elevated/80"
           : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
-      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+      style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
-      <div className={cn(
-        "w-6 h-6 rounded-full border transition-all duration-150",
-        themeBg[theme],
-        isActive ? "border-warm-500 scale-110" : "border-theme-muted/20 hover:border-theme-muted/40 active:scale-95"
-      )} />
+      <div
+        className={cn(
+          "w-6 h-6 rounded-full transition-all duration-150",
+          themeBg[theme],
+          isActive ? "scale-110" : "active:scale-95"
+        )}
+        style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
+      />
       <span className="transition-transform duration-150">{label}</span>
-      {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
-      )}
     </button>
   );
 };
@@ -451,7 +450,7 @@ const FontFamilyOption = ({ family, label, current, onClick }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-2.5 px-3 rounded-[4px] text-[12px]",
+        "relative py-2.5 px-3 rounded-md text-[12px]",
         "flex items-center justify-center",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -461,12 +460,9 @@ const FontFamilyOption = ({ family, label, current, onClick }: {
           ? "text-theme-primary bg-theme-elevated/80"
           : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
-      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+      style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
       <span className="transition-transform duration-150">{label}</span>
-      {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
-      )}
     </button>
   );
 };
@@ -500,12 +496,9 @@ const FontWeightOption = ({ weight, label, current, onClick }: {
           ? "text-theme-primary bg-theme-elevated/80"
           : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
-      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+      style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
       <span className="transition-transform duration-150">{label}</span>
-      {isActive && (
-        <div className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
-      )}
     </button>
   );
 };
@@ -531,7 +524,7 @@ const PixelStyleOption = ({ style, label, current, onClick }: {
     <button
       onClick={onClick}
       className={cn(
-        "relative py-2.5 px-1 rounded-[4px] text-[11px]",
+        "relative py-2.5 px-1 rounded-md text-[11px]",
         "flex items-center justify-center",
         "transition-all duration-150 ease-out",
         "hover:scale-[1.02]",
@@ -541,12 +534,9 @@ const PixelStyleOption = ({ style, label, current, onClick }: {
           ? "text-theme-primary bg-theme-elevated/80"
           : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
       )}
-      style={{ border: isActive ? '0.5px solid var(--warm-500)' : '0.5px solid var(--border-primary)' }}
+      style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
       <span className="transition-transform duration-150">{label}</span>
-      {isActive && (
-        <div className="absolute top-1 right-1 w-1 h-1 rounded-full bg-warm-500 animate-pulse" />
-      )}
     </button>
   );
 };

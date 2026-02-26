@@ -207,7 +207,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
           </div>
 
           <div className="flex-1 min-w-0 px-8">
-            <h1 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary truncate text-center font-ui">
+            <h1 className="text-xs uppercase tracking-[0.05em] font-semibold text-theme-primary truncate text-center font-ui">
               {currentChapter || (t('reader.aiAssistant') as string)}
             </h1>
           </div>
@@ -253,7 +253,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         style={{ borderRight: '0.5px solid var(--border-primary)' }}
       >
         <div className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
-          <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
+          <h2 className="text-xs uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
             {t('reader.toc') as string}
           </h2>
           <HeaderIconButton onClick={() => setShowToc(false)} title={t('reader.close') as string}>
@@ -291,7 +291,6 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   );
 };
 
-// Header Icon Button - Icon color only on active, bg on hover
 const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
   onClick: () => void;
   children: React.ReactNode;
@@ -306,10 +305,8 @@ const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
       "w-9 h-9 flex items-center justify-center rounded-md",
       "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
       "hover:scale-105 active:scale-95",
-      // 选中时只改变图标颜色，不改变背景
       active && "text-warm-500 hover:bg-theme-elevated/60",
-      highlight && "text-theme-primary hover:bg-theme-elevated/60",
-      // 默认状态
+      !active && highlight && "text-theme-primary hover:bg-theme-elevated/60",
       !active && !highlight && [
         "text-theme-secondary",
         "hover:text-theme-primary hover:bg-theme-elevated/60",

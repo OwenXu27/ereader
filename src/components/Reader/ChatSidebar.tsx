@@ -215,7 +215,7 @@ export const ChatSidebar = ({
     >
       {/* Header - 53px fixed height, matches main header */}
       <header className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
-        <h2 className="text-[11px] uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
+        <h2 className="text-xs uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
           {t('reader.aiAssistant') as string}
         </h2>
         {/* Close button - refined hover */}
@@ -263,27 +263,30 @@ export const ChatSidebar = ({
           </div>
         )}
 
-        {messages.map((msg, idx) => (
-          <div 
-            key={idx} 
-            className="w-full py-3"
-            style={idx > 0 ? { borderTop: '0.5px solid var(--border-primary)' } : undefined}
-          >
-            <div className="mb-1.5 text-[11px] font-semibold tracking-wide uppercase font-ui">
-              {msg.role === 'user' ? (
-                <span className="text-theme-muted">{t('chat.you') as string}</span>
-              ) : (
-                <span className="text-warm-500">{t('chat.assistant') as string}</span>
-              )}
+        {messages.map((msg, idx) => {
+          if (msg.role === 'assistant' && !msg.content) return null;
+          return (
+            <div 
+              key={idx} 
+              className="w-full py-3"
+              style={idx > 0 ? { borderTop: '0.5px solid var(--border-primary)' } : undefined}
+            >
+              <div className="mb-1.5 text-[11px] font-semibold tracking-wide uppercase font-ui">
+                {msg.role === 'user' ? (
+                  <span className="text-theme-muted">{t('chat.you') as string}</span>
+                ) : (
+                  <span className="text-warm-500">{t('chat.assistant') as string}</span>
+                )}
+              </div>
+              <div className={cn(
+                "text-sm whitespace-pre-wrap font-ui font-medium",
+                msg.role === 'user' ? "text-theme-secondary" : "text-theme-primary"
+              )} style={{ lineHeight: language === 'zh' ? 1.9 : 1.625 }}>
+                {msg.content}
+              </div>
             </div>
-            <div className={cn(
-              "text-sm whitespace-pre-wrap leading-relaxed font-ui",
-              msg.role === 'user' ? "text-theme-secondary" : "text-theme-primary"
-            )}>
-              {msg.content}
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {isLoading && !(messages.length > 0 && messages[messages.length - 1].role === 'assistant' && messages[messages.length - 1].content) && (
           <div className="w-full py-3" style={{ borderTop: '0.5px solid var(--border-primary)' }}>

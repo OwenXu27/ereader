@@ -28,14 +28,14 @@ export function getBaseStyleCSS(themeName: ThemeType, fontSize: number): string 
     }
     .translation-block {
       font-family: 'Inter', 'SF Pro Display', sans-serif;
-      font-size: 0.9em;
-      margin-top: 0.5em;
-      margin-bottom: 1em;
-      padding: 0.75em 1em;
-      line-height: 1.6;
-      border-left: 2px solid ${theme.accentWarm};
+      font-size: 0.75em;
+      margin-top: 0.75em;
+      margin-bottom: 0.75em;
+      padding: 0.5em 0.75em;
+      line-height: 1.7;
+      border-left: 0.5px solid ${theme.accentWarm};
       background-color: ${themeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'};
-      border-radius: 0 4px 4px 0;
+      border-radius: 0px 4px 4px 0px;
     }
     p {
       margin-bottom: 1.25em !important;
