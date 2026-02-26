@@ -15,6 +15,7 @@ const translations = {
       reading: '在读',
       completed: '已读',
       count: '册',
+      confirmDelete: '确认删除？',
     },
     // Settings
     settings: {
@@ -89,6 +90,8 @@ const translations = {
     common: {
       loading: '导入中...',
       error: '导入失败',
+      cancel: '取消',
+      delete: '删除',
     },
   },
   en: {
@@ -102,6 +105,7 @@ const translations = {
       reading: 'Reading',
       completed: 'Completed',
       count: 'books',
+      confirmDelete: 'Delete book?',
     },
     // Settings
     settings: {
@@ -176,6 +180,8 @@ const translations = {
     common: {
       loading: 'Loading...',
       error: 'Import failed',
+      cancel: 'Cancel',
+      delete: 'Delete',
     },
   },
 } as const;

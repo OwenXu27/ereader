@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ePub, { type Book, type Rendition, type NavItem } from 'epubjs';
-import { useBookStore, hashText } from '../store/useBookStore';
-import { translateText, TranslationError } from '../services/llm';
-import { THEME_COLORS, type ThemeType } from './useTheme';
-import type { BookLocation, EpubContents, EpubSpine } from '../types/epubjs';
-import { updateBookProgress as saveProgressToDB } from '../services/db';
+import { useBookStore } from '../store/useBookStore';
+import type { ThemeType } from './useTheme';
+import type { EpubContents, EpubSpine } from '../types/epubjs';
+import { useEpubProgress } from './useEpubProgress';
+import { useEpubTheme, getBaseStyleCSS, getThemeStyleCSS } from './useEpubTheme';
+import { registerTranslationHandlers, registerIframeKeyboard, registerSelectionHandler } from './useEpubTranslation';
 
 interface UseEpubReaderOptions {
   bookData: ArrayBuffer;
@@ -34,29 +35,22 @@ export const useEpubReader = ({
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const currentCfiRef = useRef<string>(initialCfi || '');
   const [toc, setToc] = useState<NavItem[]>([]);
   const [currentChapter, setCurrentChapter] = useState<string>('');
-  const progressRef = useRef(0);
-  const timeLeftRef = useRef<string | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const startProgressRef = useRef<number | null>(null);
-  const progressSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastProgressSaveAt = useRef(0);
-  const pendingProgressSave = useRef<{ bookId: string; cfi: string; percentage: number } | null>(null);
 
   const { settings } = useBookStore();
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (progressSaveTimer.current) {
-        clearTimeout(progressSaveTimer.current);
-      }
-    };
-  }, []);
+  const {
+    currentCfiRef,
+    progressRef,
+    timeLeftRef,
+    createRelocatedHandler,
+    flushProgressSave,
+    resetTimingState,
+  } = useEpubProgress(initialCfi);
 
-  // Navigate to chapter
+  useEpubTheme(renditionRef, isReady, settings);
+
   const goToChapter = useCallback((href: string) => {
     const rendition = renditionRef.current;
     const book = bookRef.current;
@@ -106,13 +100,10 @@ export const useEpubReader = ({
     tryDisplay();
   }, []);
 
-  // Initialize book
   useEffect(() => {
     if (!viewerRef.current) return;
 
-    startTimeRef.current = Date.now();
-    startProgressRef.current = null;
-    timeLeftRef.current = null;
+    resetTimingState();
 
     const book = ePub(bookData);
     bookRef.current = book;
@@ -126,157 +117,38 @@ export const useEpubReader = ({
     });
     renditionRef.current = rendition;
 
-    // Load TOC
     book.loaded.navigation.then((nav) => {
       setToc(nav.toc);
     });
 
-    // Register content hooks
     rendition.hooks.content.register((contents: EpubContents) => {
       const doc = contents.document;
       const head = doc.querySelector('head');
       if (!head) return;
-      
+
       const bookId = useBookStore.getState().currentBook?.id;
       const currentThemeName = useBookStore.getState().settings.theme as ThemeType;
-      const currentTheme = THEME_COLORS[currentThemeName];
-      const cleanupHandlers: Array<() => void> = [];
-
-      // Inject base styles
-      const style = doc.createElement('style');
       const currentFontSize = useBookStore.getState().settings.fontSize;
-      style.innerHTML = `
-        body {
-          font-family: 'Source Serif 4', 'Merriweather', 'Georgia', serif !important;
-          line-height: 1.75 !important;
-          font-size: ${currentFontSize}px !important;
-        }
-        ::selection {
-          background-color: ${currentTheme.selectionBg} !important;
-          color: inherit !important;
-        }
-        ::-moz-selection {
-          background-color: ${currentTheme.selectionBg} !important;
-          color: inherit !important;
-        }
-        .translation-block {
-          font-family: 'Inter', 'SF Pro Display', sans-serif;
-          font-size: 0.9em;
-          margin-top: 0.5em;
-          margin-bottom: 1em;
-          padding: 0.75em 1em;
-          line-height: 1.6;
-          border-left: 2px solid ${currentTheme.accentWarm};
-          background-color: ${currentThemeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'};
-          border-radius: 0 4px 4px 0;
-        }
-        p {
-          margin-bottom: 1.25em !important;
-          text-align: justify;
-        }
-        p.has-translation {
-          cursor: default;
-        }
-      `;
-      head.appendChild(style);
 
-      // Inject theme styles
+      const baseStyle = doc.createElement('style');
+      baseStyle.innerHTML = getBaseStyleCSS(currentThemeName, currentFontSize);
+      head.appendChild(baseStyle);
+
       const themeStyle = doc.createElement('style');
       themeStyle.id = 'reader-theme-style';
-      themeStyle.textContent = `
-        body {
-          color: ${currentTheme.textPrimary} !important;
-          background-color: ${currentTheme.bgBase} !important;
-        }
-        .translation-block {
-          color: ${currentTheme.textSecondary} !important;
-        }
-      `;
+      themeStyle.textContent = getThemeStyleCSS(currentThemeName);
       head.appendChild(themeStyle);
 
-      // Add translation handlers
-      const paragraphs = doc.querySelectorAll('p');
-      paragraphs.forEach((p: HTMLElement) => {
-        const text = p.textContent;
-        if (!text || text.length < 5) return;
+      const translationCleanup = registerTranslationHandlers(doc, bookId, currentThemeName);
+      const keyboardCleanup = registerIframeKeyboard(doc);
+      const selectionCleanup = registerSelectionHandler(doc);
 
-        const textHash = hashText(text);
-
-        // Restore cached translation
-        if (bookId) {
-          const cachedTranslation = useBookStore.getState().getTranslation(bookId, textHash);
-          if (cachedTranslation) {
-            const translationBlock = doc.createElement('div');
-            translationBlock.className = 'translation-block';
-            translationBlock.textContent = cachedTranslation;
-            p.appendChild(translationBlock);
-            p.setAttribute('data-translated', 'true');
-            p.classList.add('has-translation');
-          }
-        }
-
-        p.style.cursor = 'pointer';
-        const handleDblClick = async () => {
-          const currentSettings = useBookStore.getState().settings;
-          if (!currentSettings.translationEnabled) return;
-          if (p.getAttribute('data-translated') === 'true') return;
-
-          p.setAttribute('data-translated', 'loading');
-          const loader = doc.createElement('div');
-          loader.className = 'translation-block';
-          loader.textContent = '翻译中...';
-          p.appendChild(loader);
-
-          try {
-            const translated = await translateText(text, currentSettings.apiUrl, currentSettings.apiKey);
-            loader.textContent = translated;
-            p.setAttribute('data-translated', 'true');
-            p.classList.add('has-translation');
-
-            if (bookId) {
-              useBookStore.getState().saveTranslation(bookId, textHash, translated);
-            }
-          } catch (err) {
-            const errorMessage = err instanceof TranslationError ? err.message : '翻译失败';
-            loader.textContent = errorMessage;
-            p.removeAttribute('data-translated');
-          }
-        };
-
-        p.addEventListener('dblclick', handleDblClick);
-        cleanupHandlers.push(() => p.removeEventListener('dblclick', handleDblClick));
-      });
-
-      // Keyboard handler
-      const handleIframeKeydown = (e: KeyboardEvent) => {
-        if (e.altKey && !e.metaKey && !e.ctrlKey && (e.code === 'KeyG' || e.code === 'KeyD' || e.code === 'KeyC')) {
-          e.preventDefault();
-          e.stopPropagation();
-          window.dispatchEvent(new CustomEvent('reader-quickprompt', { detail: { code: e.code } }));
-          return;
-        }
-
-        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          window.dispatchEvent(new CustomEvent('reader-keydown', { detail: { key: e.key } }));
-        }
+      const cleanup = () => {
+        translationCleanup.forEach((fn) => fn());
+        keyboardCleanup();
+        selectionCleanup();
       };
-      doc.addEventListener('keydown', handleIframeKeydown);
-      cleanupHandlers.push(() => doc.removeEventListener('keydown', handleIframeKeydown));
 
-      // Selection handler
-      const handleSelectionMouseup = () => {
-        const selection = doc.getSelection();
-        const selectedText = selection?.toString().trim();
-        if (selectedText && selectedText.length > 0) {
-          window.dispatchEvent(new CustomEvent('reader-selection', { detail: { text: selectedText } }));
-        }
-      };
-      doc.addEventListener('mouseup', handleSelectionMouseup);
-      cleanupHandlers.push(() => doc.removeEventListener('mouseup', handleSelectionMouseup));
-
-      const cleanup = () => cleanupHandlers.forEach((fn) => fn());
       if (contents?.on) {
         try {
           contents.on('unload', cleanup);
@@ -287,93 +159,12 @@ export const useEpubReader = ({
     });
 
     rendition.display(initialCfi || undefined).then(() => {
-      // Apply initial font size immediately after display
       rendition.themes.fontSize(`${settings.fontSize}px`);
       setIsReady(true);
     });
 
-    // Progress save utilities
-    const flushProgressSave = () => {
-      const pending = pendingProgressSave.current;
-      if (!pending) return;
-      const { bookId, cfi, percentage } = pending;
-      pendingProgressSave.current = null;
-      lastProgressSaveAt.current = Date.now();
-      useBookStore.getState().updateBookProgress(bookId, cfi, percentage);
-      saveProgressToDB(bookId, cfi, percentage);
-    };
-
-    const scheduleProgressSave = (bookId: string, cfi: string, percentage: number) => {
-      pendingProgressSave.current = { bookId, cfi, percentage };
-      const now = Date.now();
-      const elapsed = now - lastProgressSaveAt.current;
-      const throttleMs = 1500;
-
-      if (elapsed >= throttleMs && !progressSaveTimer.current) {
-        flushProgressSave();
-        return;
-      }
-
-      if (!progressSaveTimer.current) {
-        const wait = Math.max(throttleMs - elapsed, 0);
-        progressSaveTimer.current = setTimeout(() => {
-          progressSaveTimer.current = null;
-          flushProgressSave();
-        }, wait);
-      }
-    };
-
-    // Handle location change
-    rendition.on('relocated', (location: BookLocation) => {
-      const startCfi = location.start.cfi;
-      const percentage = location.start.percentage;
-
-      currentCfiRef.current = startCfi;
-      progressRef.current = percentage;
-
-      // Find current chapter
-      const currentHref = location.start.href;
-      book.loaded.navigation.then((nav) => {
-        const findChapter = (items: NavItem[]): string | null => {
-          for (const item of items) {
-            if (item.href && currentHref?.includes(item.href.split('#')[0])) {
-              return item.label;
-            }
-            if (item.subitems) {
-              const found = findChapter(item.subitems);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        const chapter = findChapter(nav.toc);
-        if (chapter) setCurrentChapter(chapter);
-      });
-
-      // Estimate time left
-      if (startProgressRef.current === null) {
-        startProgressRef.current = percentage;
-        startTimeRef.current = Date.now();
-      } else {
-        const now = Date.now();
-        const timeSpentMinutes = (now - startTimeRef.current) / 1000 / 60;
-        const progressMade = percentage - startProgressRef.current;
-
-        if (progressMade > 0.01 && timeSpentMinutes > 0.1) {
-          const estimatedTotalMinutes = timeSpentMinutes / progressMade;
-          const remainingMinutes = estimatedTotalMinutes * (1 - percentage);
-
-          if (remainingMinutes < 1) timeLeftRef.current = '< 1 min left';
-          else if (remainingMinutes > 600) timeLeftRef.current = '> 10 hrs left';
-          else timeLeftRef.current = `${Math.ceil(remainingMinutes)} min left`;
-        }
-      }
-
-      const bookId = useBookStore.getState().currentBook?.id;
-      if (bookId) {
-        scheduleProgressSave(bookId, startCfi, percentage);
-      }
-    });
+    const handleRelocated = createRelocatedHandler(book, setCurrentChapter);
+    rendition.on('relocated', handleRelocated);
 
     const handleResize = () => {
       if (rendition) (rendition as unknown as { resize(): void }).resize();
@@ -383,64 +174,11 @@ export const useEpubReader = ({
     setTimeout(() => containerRef.current?.focus(), 100);
 
     return () => {
-      if (progressSaveTimer.current) {
-        clearTimeout(progressSaveTimer.current);
-        progressSaveTimer.current = null;
-      }
       flushProgressSave();
       window.removeEventListener('resize', handleResize);
       book.destroy();
     };
   }, [bookData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Apply theme changes
-  useEffect(() => {
-    if (!renditionRef.current || !isReady) return;
-
-    const rendition = renditionRef.current;
-    const currentTheme = THEME_COLORS[settings.theme as ThemeType];
-
-    try {
-      const contents = rendition.getContents() as unknown as Array<{ document: Document }>;
-      contents.forEach((content) => {
-        const doc = content.document;
-        if (doc) {
-          const oldStyle = doc.getElementById('reader-theme-style');
-          oldStyle?.remove();
-
-          const style = doc.createElement('style');
-          style.id = 'reader-theme-style';
-          style.textContent = `
-            body {
-              color: ${currentTheme.textPrimary} !important;
-              background-color: ${currentTheme.bgBase} !important;
-              font-size: ${settings.fontSize}px !important;
-            }
-            ::selection {
-              background-color: ${currentTheme.selectionBg} !important;
-            }
-            ::-moz-selection {
-              background-color: ${currentTheme.selectionBg} !important;
-            }
-            .translation-block {
-              color: ${currentTheme.textSecondary} !important;
-              border-left-color: ${currentTheme.accentWarm} !important;
-              background-color: ${settings.theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'} !important;
-            }
-          `;
-          doc.head.appendChild(style);
-
-          if (doc.body) {
-            doc.body.style.setProperty('color', currentTheme.textPrimary, 'important');
-            doc.body.style.setProperty('background-color', currentTheme.bgBase, 'important');
-            doc.body.style.setProperty('font-size', `${settings.fontSize}px`, 'important');
-          }
-        }
-      });
-    } catch (e) {
-      console.error('Theme apply error:', e);
-    }
-  }, [settings.theme, settings.fontSize, isReady]);
 
   return {
     containerRef,

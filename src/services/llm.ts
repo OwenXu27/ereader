@@ -284,14 +284,7 @@ export const sendChatMessage = async (
     apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
   }, apiKey);
 
-  const systemContent = context
-    ? `${CHAT_SYSTEM_PROMPT}\n\n当前用户引用的文本：\n「${context}」`
-    : CHAT_SYSTEM_PROMPT;
-
-  const apiMessages: ChatMessage[] = [
-    { role: 'system', content: systemContent },
-    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-  ];
+  const apiMessages = buildChatApiMessages(messages, context);
 
   try {
     return await client.chatCompletion(apiMessages, { temperature: 0.5 });
@@ -299,6 +292,45 @@ export const sendChatMessage = async (
     throw convertError(error);
   }
 };
+
+/**
+ * Send a chat message with streaming response
+ */
+export const sendChatMessageStream = async (
+  messages: ChatMessageType[],
+  apiUrl: string,
+  apiKey: string,
+  onChunk: (content: string) => void,
+  context?: string,
+  signal?: AbortSignal,
+): Promise<string> => {
+  const client = createLLMClient({
+    ...DEFAULT_CONFIG,
+    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+  }, apiKey);
+
+  const apiMessages = buildChatApiMessages(messages, context);
+
+  try {
+    return await client.chatCompletionStream(apiMessages, onChunk, { temperature: 0.5, signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
+    throw convertError(error);
+  }
+};
+
+function buildChatApiMessages(messages: ChatMessageType[], context?: string): ChatMessage[] {
+  const systemContent = context
+    ? `${CHAT_SYSTEM_PROMPT}\n\n当前用户引用的文本：\n「${context}」`
+    : CHAT_SYSTEM_PROMPT;
+
+  return [
+    { role: 'system', content: systemContent },
+    ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+  ];
+}
 
 // Convert unknown error to TranslationError
 function convertError(error: unknown): TranslationError {

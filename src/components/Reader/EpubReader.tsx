@@ -1,17 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { NavItem } from 'epubjs';
 import { useBookStore } from '../../store/useBookStore';
 import { useTranslation } from '../../i18n';
 import { useEpubReader } from '../../hooks/useEpubReader';
 import { useReaderKeyboard } from '../../hooks/useReaderKeyboard';
 import { Settings, ArrowLeft, List, X, MessageCircle } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../../utils/cn';
 import { ChatSidebar } from './ChatSidebar';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 interface EpubReaderProps {
   bookData: ArrayBuffer;
@@ -119,7 +114,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     }
   }, [showChat]);
 
-  const getContentLayout = () => {
+  const layout = useMemo(() => {
     if (showToc) {
       return { 
         marginLeft: '24%', 
@@ -142,11 +137,9 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
       headerLeft: '12%',
       headerRight: '12%'
     };
-  };
+  }, [showToc, showChat]);
 
-  const layout = getContentLayout();
-
-  const renderTocItems = (items: NavItem[], level = 0) => {
+  const renderTocItems = useCallback((items: NavItem[], level = 0) => {
     return items.map((item, index) => (
       <div key={index}>
         <button
@@ -167,7 +160,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         </button>
       </div>
     ));
-  };
+  }, [currentChapter, goToChapter]);
 
   const iconSize = 16;
 

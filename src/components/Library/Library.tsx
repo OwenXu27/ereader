@@ -1,16 +1,12 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useBookStore } from '../../store/useBookStore';
 import { useTranslation } from '../../i18n';
 import { saveBook, deleteBook } from '../../services/db';
 import { Plus, X, Book as BookIcon, Settings, Loader2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LeCorbusierCover } from '../BookCover/LeCorbusierCover';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../../utils/cn';
 import ePub from 'epubjs';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 const blobToDataUrl = (blob: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -59,6 +55,7 @@ export const Library: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -100,11 +97,17 @@ export const Library: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleRemove = async (e: React.MouseEvent, id: string) => {
+  const handleRemove = useCallback((e: React.MouseEvent, id: string, title: string) => {
     e.stopPropagation();
-    await deleteBook(id);
-    setBooks(books.filter(b => b.id !== id));
-  };
+    setDeleteTarget({ id, title });
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    await deleteBook(deleteTarget.id);
+    setBooks(books.filter(b => b.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  }, [deleteTarget, books, setBooks]);
 
   const contentMargin = '12%';
   const readingCount = books.filter(b => b.progress > 0 && b.progress < 1).length;
@@ -208,14 +211,14 @@ export const Library: React.FC = () => {
 
         {/* Books Grid */}
         {books.length > 0 ? (
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {books.map((book, index) => (
               <BookCard 
                 key={book.id} 
                 book={book} 
                 index={index}
                 onClick={() => setCurrentBook(book)}
-                onRemove={(e) => handleRemove(e, book.id)}
+                onRemove={(e) => handleRemove(e, book.id, book.title)}
               />
             ))}
           </div>
@@ -223,6 +226,67 @@ export const Library: React.FC = () => {
           <EmptyState onAdd={handleButtonClick} t={t} />
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4 bg-ink-900/20 backdrop-blur-sm"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="bg-theme-base w-full max-w-xs overflow-hidden font-ui rounded-[4px]"
+              style={{
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 0.5px var(--border-primary)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 pt-6 pb-4">
+                <h3 className="text-[14px] font-normal text-theme-primary tracking-[-0.02em]">
+                  {t('library.confirmDelete') as string || 'Delete book?'}
+                </h3>
+                <p className="text-[12px] text-theme-muted mt-1.5 leading-relaxed line-clamp-2">
+                  {deleteTarget.title}
+                </p>
+              </div>
+              <div className="px-6 pb-5 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-full text-[11px] font-medium",
+                    "text-theme-secondary",
+                    "transition-all duration-150",
+                    "hover:bg-theme-elevated/60",
+                    "active:scale-95"
+                  )}
+                >
+                  {t('common.cancel') as string || 'Cancel'}
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-full text-[11px] font-medium",
+                    "bg-red-500/10 text-red-600 dark:text-red-400",
+                    "transition-all duration-150",
+                    "hover:bg-red-500/20 hover:scale-105",
+                    "active:scale-95"
+                  )}
+                >
+                  {t('common.delete') as string || 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -275,7 +339,7 @@ interface BookCardProps {
   onRemove: (e: React.MouseEvent) => void;
 }
 
-const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
+const BookCard = React.memo(({ book, index, onClick, onRemove }: BookCardProps) => (
   <div 
     onClick={onClick}
     className={cn(
@@ -333,7 +397,7 @@ const BookCard = ({ book, index, onClick, onRemove }: BookCardProps) => (
       "transition-opacity duration-300 pointer-events-none"
     )} />
   </div>
-);
+));
 
 // Empty State Component
 interface EmptyStateProps {

@@ -3,13 +3,8 @@ import { useBookStore, type UIFontFamily, type UIFontWeight, type UIFontPixelSty
 import { useTranslation, type Language } from '../../i18n';
 import type { ThemeType } from '../../hooks/useTheme';
 import { X, Globe, ShieldAlert, Sun, Type, Sparkles, AlertCircle, Languages, Palette, Weight, Shapes } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../../utils/cn';
 import { AnimatePresence, motion } from 'framer-motion';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export const SettingsPanel: React.FC = () => {
   const { settings, updateSettings, isSettingsOpen, setSettingsOpen } = useBookStore();

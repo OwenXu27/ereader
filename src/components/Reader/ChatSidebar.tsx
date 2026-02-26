@@ -1,14 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Quote } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import { sendChatMessage, type ChatMessageType, TranslationError, getQuickPrompt, type QuickPromptMode } from '../../services/llm';
+import { cn } from '../../utils/cn';
+import { sendChatMessageStream, type ChatMessageType, TranslationError, getQuickPrompt, type QuickPromptMode } from '../../services/llm';
 import { useBookStore } from '../../store/useBookStore';
 import { useTranslation } from '../../i18n';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -37,6 +32,7 @@ export const ChatSidebar = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<ChatMessageType[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   const { settings } = useBookStore();
   const { t, language } = useTranslation();
@@ -90,14 +86,45 @@ export const ChatSidebar = ({
     setError(null);
     setIsLoading(true);
 
+    abortControllerRef.current = new AbortController();
+    const placeholderMsg: ChatMessageType = { role: 'assistant', content: '' };
+    setMessages(prev => [...prev, placeholderMsg]);
+
     try {
-      const response = await sendChatMessage(newMessages, settings.apiUrl, settings.apiKey, selectedText || undefined);
-      const assistantMessage: ChatMessageType = { role: 'assistant', content: response };
-      setMessages(prev => [...prev, assistantMessage]);
+      const finalContent = await sendChatMessageStream(
+        newMessages,
+        settings.apiUrl,
+        settings.apiKey,
+        (chunk) => {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: 'assistant', content: chunk };
+            return updated;
+          });
+        },
+        selectedText || undefined,
+        abortControllerRef.current.signal,
+      );
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: finalContent };
+        return updated;
+      });
     } catch (err) {
-      const errorMessage = err instanceof TranslationError ? err.message : 'Failed to get response';
-      setError(errorMessage);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // User cancelled - keep partial content
+      } else {
+        const errorMessage = err instanceof TranslationError ? err.message : 'Failed to get response';
+        setError(errorMessage);
+        setMessages(prev => {
+          if (prev.length > 0 && prev[prev.length - 1].role === 'assistant' && !prev[prev.length - 1].content) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   }, [isLoading, selectedText, settings.apiUrl, settings.apiKey]);
@@ -258,7 +285,7 @@ export const ChatSidebar = ({
           </div>
         ))}
 
-        {isLoading && (
+        {isLoading && !(messages.length > 0 && messages[messages.length - 1].role === 'assistant' && messages[messages.length - 1].content) && (
           <div className="w-full py-3" style={{ borderTop: '0.5px solid var(--border-primary)' }}>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-semibold tracking-wide text-warm-500 uppercase font-ui">{t('chat.assistant') as string}</span>

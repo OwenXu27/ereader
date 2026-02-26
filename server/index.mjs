@@ -39,8 +39,28 @@ app.post("/api/chat/completions", async (req, res) => {
     });
 
     const contentType = upstreamRes.headers.get("content-type") || "";
-    const raw = await upstreamRes.text();
+    const isStream = req.body?.stream === true && contentType.includes("text/event-stream");
 
+    if (isStream && upstreamRes.body) {
+      res.status(upstreamRes.status);
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const reader = upstreamRes.body.getReader();
+      const pump = async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) { res.end(); return; }
+          res.write(value);
+        }
+      };
+      req.on("close", () => reader.cancel());
+      await pump();
+      return;
+    }
+
+    const raw = await upstreamRes.text();
     res.status(upstreamRes.status);
     if (contentType.includes("application/json")) {
       try {
@@ -53,12 +73,14 @@ app.post("/api/chat/completions", async (req, res) => {
 
     res.type("text/plain").send(raw);
   } catch (err) {
-    res.status(502).json({
-      error: {
-        message: String(err?.message || err),
-        type: "upstream_fetch_error",
-      },
-    });
+    if (!res.headersSent) {
+      res.status(502).json({
+        error: {
+          message: String(err?.message || err),
+          type: "upstream_fetch_error",
+        },
+      });
+    }
   }
 });
 
