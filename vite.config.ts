@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
+    host: true,
     proxy: {
-      // Same-origin /api → local proxy server (avoids CORS + hides API key)
       '/api': 'http://localhost:5177',
     },
   },

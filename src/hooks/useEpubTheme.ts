@@ -8,14 +8,57 @@ interface ThemeSettings {
 }
 
 /**
- * Generate base CSS for initial content injection.
+ * Structural CSS for epub content — layout, typography, spacing.
+ * Color-free; all appearance is handled by getThemeStyleCSS.
  */
-export function getBaseStyleCSS(themeName: ThemeType, fontSize: number): string {
+export function getBaseStyleCSS(): string {
+  return `
+    html, body {
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      font-family: 'Source Serif 4', 'Merriweather', 'Georgia', serif !important;
+      line-height: 1.6 !important;
+    }
+    body:lang(zh), body:lang(ja), body:lang(ko) {
+      line-height: 1.8 !important;
+    }
+    p, li, dd, dt, blockquote, figcaption, td, th {
+      line-height: inherit !important;
+    }
+    .translation-block {
+      font-family: 'Inter', 'SF Pro Display', sans-serif;
+      font-size: 0.75em;
+      margin-top: 0.75em;
+      margin-bottom: 0.75em;
+      padding: 0.5em 0.75em;
+      line-height: 1.7;
+      border-left: 0.5px solid transparent;
+      border-radius: 0px 4px 4px 0px;
+    }
+    p {
+      margin-bottom: 1.25em !important;
+      text-align: justify;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    p.has-translation {
+      cursor: default;
+    }
+  `;
+}
+
+/**
+ * Theme-dependent CSS — colors, selection, font-size.
+ * Used both for initial injection and live theme/fontSize updates.
+ */
+export function getThemeStyleCSS(themeName: ThemeType, fontSize: number): string {
   const theme = THEME_COLORS[themeName];
   return `
     body {
-      font-family: 'Source Serif 4', 'Merriweather', 'Georgia', serif !important;
-      line-height: 1.75 !important;
+      color: ${theme.textPrimary} !important;
+      background-color: ${theme.bgBase} !important;
       font-size: ${fontSize}px !important;
     }
     ::selection {
@@ -27,38 +70,9 @@ export function getBaseStyleCSS(themeName: ThemeType, fontSize: number): string 
       color: inherit !important;
     }
     .translation-block {
-      font-family: 'Inter', 'SF Pro Display', sans-serif;
-      font-size: 0.75em;
-      margin-top: 0.75em;
-      margin-bottom: 0.75em;
-      padding: 0.5em 0.75em;
-      line-height: 1.7;
-      border-left: 0.5px solid ${theme.accentWarm};
-      background-color: ${themeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'};
-      border-radius: 0px 4px 4px 0px;
-    }
-    p {
-      margin-bottom: 1.25em !important;
-      text-align: justify;
-    }
-    p.has-translation {
-      cursor: default;
-    }
-  `;
-}
-
-/**
- * Generate theme-specific CSS for the reader-theme-style element.
- */
-export function getThemeStyleCSS(themeName: ThemeType): string {
-  const theme = THEME_COLORS[themeName];
-  return `
-    body {
-      color: ${theme.textPrimary} !important;
-      background-color: ${theme.bgBase} !important;
-    }
-    .translation-block {
       color: ${theme.textSecondary} !important;
+      border-left-color: ${theme.accentWarm} !important;
+      background-color: ${themeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'} !important;
     }
   `;
 }
@@ -76,7 +90,6 @@ export const useEpubTheme = (
 
     const rendition = renditionRef.current;
     const themeName = settings.theme as ThemeType;
-    const currentTheme = THEME_COLORS[themeName];
 
     try {
       const contents = rendition.getContents() as unknown as Array<{ document: Document }>;
@@ -89,29 +102,13 @@ export const useEpubTheme = (
 
         const style = doc.createElement('style');
         style.id = 'reader-theme-style';
-        style.textContent = `
-          body {
-            color: ${currentTheme.textPrimary} !important;
-            background-color: ${currentTheme.bgBase} !important;
-            font-size: ${settings.fontSize}px !important;
-          }
-          ::selection {
-            background-color: ${currentTheme.selectionBg} !important;
-          }
-          ::-moz-selection {
-            background-color: ${currentTheme.selectionBg} !important;
-          }
-          .translation-block {
-            color: ${currentTheme.textSecondary} !important;
-            border-left-color: ${currentTheme.accentWarm} !important;
-            background-color: ${themeName === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(139, 111, 78, 0.08)'} !important;
-          }
-        `;
+        style.textContent = getThemeStyleCSS(themeName, settings.fontSize);
         doc.head.appendChild(style);
 
         if (doc.body) {
-          doc.body.style.setProperty('color', currentTheme.textPrimary, 'important');
-          doc.body.style.setProperty('background-color', currentTheme.bgBase, 'important');
+          const theme = THEME_COLORS[themeName];
+          doc.body.style.setProperty('color', theme.textPrimary, 'important');
+          doc.body.style.setProperty('background-color', theme.bgBase, 'important');
           doc.body.style.setProperty('font-size', `${settings.fontSize}px`, 'important');
         }
       });

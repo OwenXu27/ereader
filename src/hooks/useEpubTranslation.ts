@@ -2,17 +2,25 @@ import { useBookStore, hashText } from '../store/useBookStore';
 import { translateText, TranslationError } from '../services/llm';
 import type { ThemeType } from './useTheme';
 
+export interface TranslationRegistration {
+  cleanups: Array<() => void>;
+  triggerMap: Map<HTMLElement, () => Promise<void>>;
+}
+
 /**
- * Register translation double-click handlers on all paragraphs in an epub content document.
- * Restores cached translations and adds interactive translate-on-dblclick.
- * Returns an array of cleanup functions.
+ * Register translation dblclick handlers on all paragraphs in an epub content document.
+ * Restores cached translations and builds a triggerMap for mobile use.
+ *
+ * Desktop: dblclick on <p> triggers translation.
+ * Mobile: parent overlay reads triggerMap via ref to call translation directly.
  */
 export function registerTranslationHandlers(
   doc: Document,
   bookId: string | undefined,
   _themeName: ThemeType,
-): Array<() => void> {
-  const cleanupHandlers: Array<() => void> = [];
+): TranslationRegistration {
+  const cleanups: Array<() => void> = [];
+  const triggerMap = new Map<HTMLElement, () => Promise<void>>();
   const paragraphs = doc.querySelectorAll('p');
 
   paragraphs.forEach((p: HTMLElement) => {
@@ -34,10 +42,12 @@ export function registerTranslationHandlers(
     }
 
     p.style.cursor = 'pointer';
-    const handleDblClick = async () => {
+
+    const triggerTranslation = async () => {
       const currentSettings = useBookStore.getState().settings;
       if (!currentSettings.translationEnabled) return;
       if (p.getAttribute('data-translated') === 'true') return;
+      if (p.getAttribute('data-translated') === 'loading') return;
 
       p.setAttribute('data-translated', 'loading');
       const loader = doc.createElement('div');
@@ -62,11 +72,13 @@ export function registerTranslationHandlers(
       }
     };
 
-    p.addEventListener('dblclick', handleDblClick);
-    cleanupHandlers.push(() => p.removeEventListener('dblclick', handleDblClick));
+    triggerMap.set(p, triggerTranslation);
+
+    p.addEventListener('dblclick', triggerTranslation);
+    cleanups.push(() => p.removeEventListener('dblclick', triggerTranslation));
   });
 
-  return cleanupHandlers;
+  return { cleanups, triggerMap };
 }
 
 /**

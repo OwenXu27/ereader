@@ -93,7 +93,7 @@ function App() {
 
   return (
     <div 
-      className={`h-screen w-screen bg-theme-base text-theme-primary flex overflow-hidden font-reading ${theme.selection}`}
+      className={`h-full w-full bg-theme-base text-theme-primary flex overflow-hidden font-reading ${theme.selection}`}
       style={{ fontWeight: uiFontWeight }}
     >
       {isBookLoading ? (

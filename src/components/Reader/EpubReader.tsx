@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { NavItem } from 'epubjs';
 import { useBookStore } from '../../store/useBookStore';
 import { useTranslation } from '../../i18n';
 import { useEpubReader } from '../../hooks/useEpubReader';
 import { useReaderKeyboard } from '../../hooks/useReaderKeyboard';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { Settings, ArrowLeft, List, X, MessageCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ChatSidebar } from './ChatSidebar';
@@ -24,6 +25,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   const hideHeaderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setSettingsOpen } = useBookStore();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
 
   const {
     containerRef,
@@ -32,6 +34,8 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     toc,
     currentChapter,
     renditionRef,
+    iframeDocRef,
+    translationMapRef,
     goToChapter,
   } = useEpubReader({ bookData, initialCfi });
 
@@ -39,15 +43,42 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
     setQuickPromptMode(mode);
   }, []);
 
+  const handleShowChat = useCallback(() => setShowChat(true), []);
+
   useReaderKeyboard({
     renditionRef,
     onClose,
     showToc,
-    showChat,
-    onShowChat: () => setShowChat(true),
+    onShowChat: handleShowChat,
     selectedText,
     onQuickPrompt: handleQuickPrompt,
   });
+
+  const handleToggleHeader = useCallback(() => {
+    setShowHeader(prev => {
+      if (!prev) {
+        if (hideHeaderTimer.current) clearTimeout(hideHeaderTimer.current);
+        hideHeaderTimer.current = setTimeout(() => setShowHeader(false), 4000);
+      }
+      return !prev;
+    });
+  }, []);
+
+  const isNavigatingRef = useRef(false);
+  const handleTouchNav = useCallback(async (direction: 'next' | 'prev') => {
+    const rendition = renditionRef.current;
+    if (!rendition || isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    try {
+      if (direction === 'next') await rendition.next();
+      else await rendition.prev();
+    } finally {
+      isNavigatingRef.current = false;
+    }
+  }, [renditionRef]);
+
+  const handlePrevPage = useCallback(() => handleTouchNav('prev'), [handleTouchNav]);
+  const handleNextPage = useCallback(() => handleTouchNav('next'), [handleTouchNav]);
 
   useEffect(() => {
     const handleSelection = (e: Event) => {
@@ -115,6 +146,14 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
   }, [showChat]);
 
   const layout = useMemo(() => {
+    if (isMobile) {
+      return {
+        marginLeft: '0%',
+        marginRight: '0%',
+        headerLeft: '0%',
+        headerRight: '0%',
+      };
+    }
     if (showToc) {
       return { 
         marginLeft: '24%', 
@@ -137,7 +176,7 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
       headerLeft: '12%',
       headerRight: '12%'
     };
-  }, [showToc, showChat]);
+  }, [showToc, showChat, isMobile]);
 
   const renderTocItems = useCallback((items: NavItem[], level = 0) => {
     return items.map((item, index) => (
@@ -166,20 +205,23 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-theme-base">
-      {/* Header Trigger Zone - Follows content layout */}
-      <div 
-        className="fixed top-0 h-[12px] z-50 transition-all duration-slow ease-out-custom"
-        style={{ left: layout.headerLeft, right: layout.headerRight }}
-        onMouseEnter={handleHeaderTriggerEnter}
-      />
+      {/* Header Trigger Zone - desktop only */}
+      {!isMobile && (
+        <div 
+          className="fixed top-0 h-[12px] z-50 transition-all duration-slow ease-out-custom"
+          style={{ left: layout.headerLeft, right: layout.headerRight }}
+          onMouseEnter={handleHeaderTriggerEnter}
+        />
+      )}
 
-      {/* Primary Header - Follows content layout */}
+      {/* Primary Header */}
       <header
-        onMouseEnter={handleHeaderMouseEnter}
-        onMouseLeave={handleHeaderMouseLeave}
+        onMouseEnter={isMobile ? undefined : handleHeaderMouseEnter}
+        onMouseLeave={isMobile ? undefined : handleHeaderMouseLeave}
         className={cn(
           "fixed top-0 z-40 transition-all duration-slow ease-out-custom",
-          showHeader ? "translate-y-0" : "-translate-y-full"
+          showHeader ? "translate-y-0" : "-translate-y-full",
+          isMobile && "pt-[env(safe-area-inset-top)]"
         )}
         style={{
           left: layout.headerLeft,
@@ -206,21 +248,23 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
             </HeaderIconButton>
           </div>
 
-          <div className="flex-1 min-w-0 px-8">
+          <div className="flex-1 min-w-0 px-4 md:px-8">
             <h1 className="text-xs uppercase tracking-[0.05em] font-semibold text-theme-primary truncate text-center font-ui">
               {currentChapter || (t('reader.aiAssistant') as string)}
             </h1>
           </div>
 
           <div className="flex items-center gap-1">
-            <HeaderIconButton 
-              onClick={handleToggleChat} 
-              title={showChat ? (t('reader.close') as string) : (t('reader.aiAssistant') as string)}
-              active={showChat}
-              highlight={!!selectedText}
-            >
-              <MessageCircle size={iconSize} />
-            </HeaderIconButton>
+            {!isMobile && (
+              <HeaderIconButton 
+                onClick={handleToggleChat} 
+                title={showChat ? (t('reader.close') as string) : (t('reader.aiAssistant') as string)}
+                active={showChat}
+                highlight={!!selectedText}
+              >
+                <MessageCircle size={iconSize} />
+              </HeaderIconButton>
+            )}
             <HeaderIconButton onClick={() => setSettingsOpen(true)} title={t('library.settings') as string}>
               <Settings size={iconSize} />
             </HeaderIconButton>
@@ -241,16 +285,30 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
         <div ref={viewerRef} className="absolute inset-0 w-full h-full" />
       </div>
 
+      {/* Mobile touch zones — physical DOM elements above the iframe */}
+      {isMobile && !showToc && (
+        <MobileTouchZones
+          onPrev={handlePrevPage}
+          onNext={handleNextPage}
+          onToggleHeader={handleToggleHeader}
+          iframeDocRef={iframeDocRef}
+          translationMapRef={translationMapRef}
+          viewerRef={viewerRef}
+        />
+      )}
+
       {/* TOC Panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-[24%] max-w-[420px] min-w-[280px]",
+          "fixed inset-y-0 left-0 z-30",
           "bg-theme-base",
           "transition-transform duration-normal ease-out-custom",
           "flex flex-col",
-          showToc ? "translate-x-0" : "-translate-x-full"
+          isMobile ? "w-full" : "w-[24%] max-w-[420px] min-w-[280px]",
+          showToc ? "translate-x-0" : "-translate-x-full",
+          isMobile && "pt-[env(safe-area-inset-top)]"
         )}
-        style={{ borderRight: '0.5px solid var(--border-primary)' }}
+        style={{ borderRight: isMobile ? undefined : '0.5px solid var(--border-primary)' }}
       >
         <div className="h-[53px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '0.5px solid var(--border-primary)' }}>
           <h2 className="text-xs uppercase tracking-[0.05em] font-semibold text-theme-primary font-ui">
@@ -271,25 +329,179 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
       </aside>
 
       {/* TOC Backdrop */}
-      {showToc && (
+      {showToc && !isMobile && (
         <div 
           className="fixed inset-0 z-25 bg-ink-900/10 backdrop-blur-[1px] transition-opacity duration-normal"
           onClick={() => setShowToc(false)}
         />
       )}
 
-      {/* Chat Sidebar */}
-      <ChatSidebar
-        isOpen={showChat}
-        onClose={() => setShowChat(false)}
-        selectedText={selectedText}
-        onClearSelection={() => setSelectedText('')}
-        quickPromptMode={quickPromptMode}
-        onQuickPromptHandled={() => setQuickPromptMode(null)}
-      />
+      {/* Chat Sidebar - desktop only */}
+      {!isMobile && (
+        <ChatSidebar
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          selectedText={selectedText}
+          onClearSelection={() => setSelectedText('')}
+          quickPromptMode={quickPromptMode}
+          onQuickPromptHandled={() => setQuickPromptMode(null)}
+        />
+      )}
     </div>
   );
 };
+
+/**
+ * Invisible touch zones overlaid on the reader for mobile.
+ *
+ * Layout (full-screen):
+ *   ┌──────────────────────────┐
+ *   │       TOP  (header)      │  44px
+ *   ├────┬────────────────┬────┤
+ *   │LEFT│    CENTER       │RGHT│
+ *   │prev│  (dbl-tap =     │next│
+ *   │    │   translate)    │    │
+ *   ├────┴────────────────┴────┤
+ *   └──────────────────────────┘
+ *
+ * Center zone: single-tap = nothing, double-tap = translate paragraph.
+ * All zones have touch-action:manipulation to prevent browser zoom.
+ */
+interface MobileTouchZonesProps {
+  onPrev: () => void;
+  onNext: () => void;
+  onToggleHeader: () => void;
+  iframeDocRef: React.MutableRefObject<Document | null>;
+  translationMapRef: React.MutableRefObject<Map<HTMLElement, () => Promise<void>>>;
+  viewerRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const ZONE_STYLE = { touchAction: 'manipulation' as const };
+
+const MobileTouchZones = React.memo(({ onPrev, onNext, onToggleHeader, iframeDocRef, translationMapRef, viewerRef }: MobileTouchZonesProps) => {
+  const lastCenterTapRef = useRef(0);
+
+  const { prevHandlers, nextHandlers, headerHandlers } = useMemo(() => {
+    const makeTapHandler = (action: () => void) => {
+      let startX = 0;
+      let startY = 0;
+      return {
+        onTouchStart: (e: React.TouchEvent) => {
+          const t = e.touches[0];
+          startX = t.clientX;
+          startY = t.clientY;
+        },
+        onTouchEnd: (e: React.TouchEvent) => {
+          const t = e.changedTouches[0];
+          if (Math.abs(t.clientX - startX) < 20 && Math.abs(t.clientY - startY) < 20) {
+            e.preventDefault();
+            action();
+          }
+        },
+      };
+    };
+    return {
+      prevHandlers: makeTapHandler(onPrev),
+      nextHandlers: makeTapHandler(onNext),
+      headerHandlers: makeTapHandler(onToggleHeader),
+    };
+  }, [onPrev, onNext, onToggleHeader]);
+
+  const triggerTranslationAtPoint = useCallback((x: number, y: number) => {
+    const doc = iframeDocRef.current;
+    if (!doc) return;
+
+    const iframe = viewerRef.current?.querySelector('iframe');
+    if (!iframe) return;
+    const rect = iframe.getBoundingClientRect();
+    const iframeX = x - rect.left;
+    const iframeY = y - rect.top;
+
+    const el = doc.elementFromPoint(iframeX, iframeY);
+    if (!el) return;
+
+    let node: Element | null = el;
+    while (node && node.tagName !== 'BODY') {
+      if (node.tagName === 'P') break;
+      node = node.parentElement;
+    }
+    if (!node || node.tagName !== 'P') return;
+    const p = node as HTMLElement;
+
+    const triggerFn = translationMapRef.current.get(p);
+    if (triggerFn) {
+      triggerFn();
+    }
+  }, [iframeDocRef, translationMapRef, viewerRef]);
+
+  const centerHandlers = useMemo(() => {
+    let startX = 0;
+    let startY = 0;
+    return {
+      onTouchStart: (e: React.TouchEvent) => {
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+      },
+      onTouchEnd: (e: React.TouchEvent) => {
+        const t = e.changedTouches[0];
+        const ex = t.clientX;
+        const ey = t.clientY;
+        if (Math.abs(ex - startX) > 20 || Math.abs(ey - startY) > 20) return;
+
+        e.preventDefault();
+        const now = Date.now();
+        if (now - lastCenterTapRef.current < 450) {
+          lastCenterTapRef.current = 0;
+          triggerTranslationAtPoint(ex, ey);
+        } else {
+          lastCenterTapRef.current = now;
+        }
+      },
+    };
+  }, [triggerTranslationAtPoint]);
+
+  return (
+    <>
+      {/* Top strip — toggle header */}
+      <div
+        className="fixed top-0 left-0 right-0 z-20"
+        style={{ height: 'calc(env(safe-area-inset-top, 0px) + 44px)', ...ZONE_STYLE }}
+        {...headerHandlers}
+      />
+      {/* Left zone — prev page */}
+      <div
+        className="fixed left-0 w-[20%] z-20"
+        style={{
+          top: 'calc(env(safe-area-inset-top, 0px) + 44px)',
+          bottom: 'env(safe-area-inset-bottom, 0px)',
+          ...ZONE_STYLE,
+        }}
+        {...prevHandlers}
+      />
+      {/* Center zone — double-tap to translate */}
+      <div
+        className="fixed left-[20%] right-[20%] z-20"
+        style={{
+          top: 'calc(env(safe-area-inset-top, 0px) + 44px)',
+          bottom: 'env(safe-area-inset-bottom, 0px)',
+          ...ZONE_STYLE,
+        }}
+        {...centerHandlers}
+      />
+      {/* Right zone — next page */}
+      <div
+        className="fixed right-0 w-[20%] z-20"
+        style={{
+          top: 'calc(env(safe-area-inset-top, 0px) + 44px)',
+          bottom: 'env(safe-area-inset-bottom, 0px)',
+          ...ZONE_STYLE,
+        }}
+        {...nextHandlers}
+      />
+    </>
+  );
+});
 
 const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
   onClick: () => void;

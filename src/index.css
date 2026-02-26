@@ -173,7 +173,13 @@
 
 @layer base {
   html, body {
-    @apply h-full overflow-hidden;
+    @apply overflow-hidden;
+    height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    height: 100%;
   }
   
   body {
@@ -181,11 +187,17 @@
     font-family: 'Source Serif 4', Merriweather, Georgia, serif;
     background-color: var(--bg-base);
     color: var(--text-primary);
+    overscroll-behavior: none;
   }
   
   /* Selection styling */
   ::selection {
     background-color: var(--selection-bg);
+  }
+
+  /* Prevent pull-to-refresh on mobile */
+  html {
+    overscroll-behavior: none;
   }
 }
 

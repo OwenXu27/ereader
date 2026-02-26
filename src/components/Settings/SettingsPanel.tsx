@@ -32,7 +32,7 @@ export const SettingsPanel: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }}
             transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-            className="bg-theme-base w-full max-w-sm overflow-hidden font-ui rounded-[4px]"
+            className="bg-theme-base w-full max-w-sm overflow-hidden font-ui rounded-[4px] max-md:max-w-[calc(100%-2rem)]"
             style={{ 
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 0.5px var(--border-primary)'
             }}

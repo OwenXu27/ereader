@@ -6,6 +6,7 @@ import { Plus, X, Book as BookIcon, Settings, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LeCorbusierCover } from '../BookCover/LeCorbusierCover';
 import { cn } from '../../utils/cn';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import ePub from 'epubjs';
 
 const blobToDataUrl = (blob: Blob): Promise<string> =>
@@ -109,7 +110,8 @@ export const Library: React.FC = () => {
     setDeleteTarget(null);
   }, [deleteTarget, books, setBooks]);
 
-  const contentMargin = '12%';
+  const isMobile = useIsMobile();
+  const contentMargin = isMobile ? '5%' : '12%';
   const readingCount = books.filter(b => b.progress > 0 && b.progress < 1).length;
   const completedCount = books.filter(b => b.progress >= 1).length;
 
@@ -122,7 +124,7 @@ export const Library: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-theme-base font-ui selection:bg-warm-500/20">
       {/* Header */}
       <header 
-        className="pt-6 shrink-0"
+        className={cn("pt-6 shrink-0", isMobile && "pt-[calc(env(safe-area-inset-top)+16px)]")}
         style={{ marginLeft: contentMargin, marginRight: contentMargin }}
       >
         {/* Primary bar — 53px, matches reader/TOC/chat headers */}
@@ -206,7 +208,7 @@ export const Library: React.FC = () => {
 
         {/* Books Grid */}
         {books.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
             {books.map((book, index) => (
               <BookCard 
                 key={book.id} 

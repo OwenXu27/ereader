@@ -23,6 +23,8 @@ interface UseEpubReaderReturn {
   timeLeftRef: React.MutableRefObject<string | null>;
   renditionRef: React.MutableRefObject<Rendition | null>;
   bookRef: React.MutableRefObject<Book | null>;
+  iframeDocRef: React.MutableRefObject<Document | null>;
+  translationMapRef: React.MutableRefObject<Map<HTMLElement, () => Promise<void>>>;
   goToChapter: (href: string) => void;
 }
 
@@ -34,6 +36,8 @@ export const useEpubReader = ({
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
+  const iframeDocRef = useRef<Document | null>(null);
+  const translationMapRef = useRef<Map<HTMLElement, () => Promise<void>>>(new Map());
   const [isReady, setIsReady] = useState(false);
   const [toc, setToc] = useState<NavItem[]>([]);
   const [currentChapter, setCurrentChapter] = useState<string>('');
@@ -121,25 +125,38 @@ export const useEpubReader = ({
       setToc(nav.toc);
     });
 
-    rendition.hooks.content.register((contents: EpubContents) => {
+    rendition.hooks.content.register(async (contents: EpubContents) => {
       const doc = contents.document;
       const head = doc.querySelector('head');
       if (!head) return;
+
+      const htmlEl = doc.documentElement;
+      if (!htmlEl.getAttribute('lang') && !htmlEl.getAttribute('xml:lang')) {
+        try {
+          const metadata = await book.loaded.metadata;
+          if (metadata.language) {
+            htmlEl.setAttribute('lang', metadata.language);
+          }
+        } catch { /* ignore */ }
+      }
 
       const bookId = useBookStore.getState().currentBook?.id;
       const currentThemeName = useBookStore.getState().settings.theme as ThemeType;
       const currentFontSize = useBookStore.getState().settings.fontSize;
 
       const baseStyle = doc.createElement('style');
-      baseStyle.innerHTML = getBaseStyleCSS(currentThemeName, currentFontSize);
+      baseStyle.innerHTML = getBaseStyleCSS();
       head.appendChild(baseStyle);
 
       const themeStyle = doc.createElement('style');
       themeStyle.id = 'reader-theme-style';
-      themeStyle.textContent = getThemeStyleCSS(currentThemeName);
+      themeStyle.textContent = getThemeStyleCSS(currentThemeName, currentFontSize);
       head.appendChild(themeStyle);
 
-      const translationCleanup = registerTranslationHandlers(doc, bookId, currentThemeName);
+      const { cleanups: translationCleanup, triggerMap } = registerTranslationHandlers(doc, bookId, currentThemeName);
+      iframeDocRef.current = doc;
+      translationMapRef.current = triggerMap;
+
       const keyboardCleanup = registerIframeKeyboard(doc);
       const selectionCleanup = registerSelectionHandler(doc);
 
@@ -147,6 +164,10 @@ export const useEpubReader = ({
         translationCleanup.forEach((fn) => fn());
         keyboardCleanup();
         selectionCleanup();
+        if (iframeDocRef.current === doc) {
+          iframeDocRef.current = null;
+          translationMapRef.current = new Map();
+        }
       };
 
       if (contents?.on) {
@@ -191,6 +212,8 @@ export const useEpubReader = ({
     timeLeftRef,
     renditionRef,
     bookRef,
+    iframeDocRef,
+    translationMapRef,
     goToChapter,
   };
 };

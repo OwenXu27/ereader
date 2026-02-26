@@ -6,7 +6,6 @@ interface UseReaderKeyboardOptions {
   renditionRef: React.MutableRefObject<Rendition | null>;
   onClose: () => void;
   showToc: boolean;
-  showChat: boolean;
   onShowChat: () => void;
   selectedText: string;
   onQuickPrompt: (mode: QuickPromptMode) => void;
@@ -16,7 +15,6 @@ export const useReaderKeyboard = ({
   renditionRef,
   onClose,
   showToc,
-  showChat,
   onShowChat,
   selectedText,
   onQuickPrompt,
@@ -110,16 +108,6 @@ export const useReaderKeyboard = ({
       window.removeEventListener('reader-quickprompt', handleQuickPromptFromIframe);
     };
   }, [selectedText, showToc, onShowChat, onQuickPrompt]);
-
-  // Keep focus when window regains focus
-  useEffect(() => {
-    const handleWindowFocus = () => {
-      if (showChat) return;
-      // Let the component handle focus
-    };
-    window.addEventListener('focus', handleWindowFocus);
-    return () => window.removeEventListener('focus', handleWindowFocus);
-  }, [showChat]);
 
   return { isNavigatingRef };
 };
