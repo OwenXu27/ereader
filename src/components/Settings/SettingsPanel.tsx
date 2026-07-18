@@ -412,7 +412,6 @@ export const SettingsPanel: React.FC = () => {
                   <MinimalSwitch
                     checked={settings.allowScriptedContent}
                     onChange={(checked) => updateSettings({ allowScriptedContent: checked })}
-                    variant="warning"
                   />
                 </div>
                 <p className="mt-2 text-[11px] text-theme-muted-50 leading-relaxed">
@@ -628,25 +627,25 @@ const PixelStyleOption = ({ style, label, current, onClick }: {
 };
 
 // Minimal Switch Component - Refined
-// The -m-2/p-2 trick enlarges the click target without changing the visuals
-const MinimalSwitch = ({ checked, onChange, variant = 'default' }: {
+// The -m-2/p-2 trick enlarges the click target without changing the visuals.
+// The knob is positioned relative to the TRACK (not the padded label) so it
+// stays seated inside the track.
+const MinimalSwitch = ({ checked, onChange }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  variant?: 'default' | 'warning';
 }) => (
   <label className="relative inline-flex items-center cursor-pointer group -m-2 p-2">
-    <input 
-      type="checkbox" 
+    <input
+      type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
       className="sr-only peer"
     />
     <div
       className={cn(
-        "w-9 h-5 rounded-full transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "relative w-9 h-5 rounded-full transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
         "bg-theme-elevated peer-checked:bg-[var(--accent-warm)]",
-        "group-hover:shadow-sm",
-        variant === 'warning' && checked && "peer-checked:bg-amber-500"
+        "group-hover:shadow-sm"
       )}
       style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
     >
