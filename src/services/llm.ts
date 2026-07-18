@@ -3,7 +3,7 @@ import { createLLMClient, type LLMConfig, type ChatMessage } from '../utils/llm-
 // Default configuration from environment variables
 const DEFAULT_CONFIG: LLMConfig = {
   apiUrl: import.meta.env?.VITE_MOONSHOT_CHAT_COMPLETIONS_URL || '/api/chat/completions',
-  model: import.meta.env?.VITE_MOONSHOT_MODEL || 'kimi-k2-turbo-preview',
+  model: import.meta.env?.VITE_MOONSHOT_MODEL || 'kimi-k2.7-code-highspeed',
   temperature: (() => {
     const v = import.meta.env?.VITE_MOONSHOT_TEMPERATURE;
     const n = v ? Number(v) : NaN;
