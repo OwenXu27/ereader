@@ -57,7 +57,7 @@ export function registerTranslationHandlers(
       p.appendChild(loader);
 
       try {
-        const translated = await translateText(text, currentSettings.apiUrl, currentSettings.apiKey);
+        const translated = await translateText(text, currentSettings.apiUrl, currentSettings.apiKey, currentSettings.model);
         loader.textContent = translated;
         p.setAttribute('data-translated', 'true');
         p.classList.add('has-translation');

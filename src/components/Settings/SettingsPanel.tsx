@@ -2,7 +2,7 @@ import React from 'react';
 import { useBookStore, type UIFontFamily, type UIFontWeight, type UIFontPixelStyle } from '../../store/useBookStore';
 import { useTranslation, type Language } from '../../i18n';
 import type { ThemeType } from '../../hooks/useTheme';
-import { X, Globe, ShieldAlert, Sun, Type, Sparkles, AlertCircle, Languages, Palette, Weight, Shapes } from 'lucide-react';
+import { X, Globe, ShieldAlert, Sun, Type, Sparkles, AlertCircle, Languages, Palette, Weight, Shapes, Cpu } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -65,7 +65,7 @@ export const SettingsPanel: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="px-6 pb-8 space-y-8 max-h-[60vh] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+            <div className="px-6 pb-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
               
               {/* Language Section */}
               <section>
@@ -313,6 +313,37 @@ export const SettingsPanel: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-theme-muted/50">
                         {t('settings.apiKeyHint') as string}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-theme-secondary flex items-center gap-1">
+                        <Cpu size={11} strokeWidth={1.5} className="opacity-50" />
+                        {t('settings.model') as string}
+                      </label>
+                      <div
+                        className={cn(
+                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "bg-theme-input",
+                          settings.model && "border-warm-500/50",
+                          "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                          "hover:border-theme-muted/30"
+                        )}
+                        style={{ borderWidth: '0.5px', borderColor: settings.model ? undefined : 'var(--border-primary)' }}
+                      >
+                        <input
+                          type="text"
+                          value={settings.model}
+                          onChange={(e) => updateSettings({ model: e.target.value })}
+                          placeholder="kimi-k2-turbo-preview"
+                          className={cn(
+                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "focus:outline-none"
+                          )}
+                        />
+                      </div>
+                      <p className="text-[11px] text-theme-muted/50">
+                        {t('settings.modelHint') as string}
                       </p>
                     </div>
                   </motion.div>

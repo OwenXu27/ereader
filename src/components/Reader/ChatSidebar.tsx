@@ -104,6 +104,7 @@ export const ChatSidebar = ({
         },
         selectedText || undefined,
         abortControllerRef.current.signal,
+        settings.model,
       );
       setMessages(prev => {
         const updated = [...prev];
@@ -127,7 +128,7 @@ export const ChatSidebar = ({
       abortControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [isLoading, selectedText, settings.apiUrl, settings.apiKey]);
+  }, [isLoading, selectedText, settings.apiUrl, settings.apiKey, settings.model]);
 
   const handleSend = useCallback(() => {
     const combined = quotedText ? `「${quotedText}」\n\n${input}` : input;

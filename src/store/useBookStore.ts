@@ -16,6 +16,7 @@ interface Settings {
   translationEnabled: boolean;
   apiUrl: string;
   apiKey: string;
+  model: string;
   allowScriptedContent: boolean;
 }
 
@@ -68,6 +69,7 @@ export const useBookStore = create<ReaderState>()(
         translationEnabled: false,
         apiUrl: '',
         apiKey: '',
+        model: '',
         allowScriptedContent: false,
       },
       books: [],
@@ -123,6 +125,7 @@ export const useBookStore = create<ReaderState>()(
           allowScriptedContent: state.settings.allowScriptedContent,
           apiUrl: state.settings.apiUrl,
           apiKey: state.settings.apiKey,
+          model: state.settings.model,
         },
         translations: state.translations,
       }),

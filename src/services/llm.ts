@@ -244,17 +244,23 @@ export interface ChatMessageType {
 // API 函数
 // ============================================
 
+// kimi-k2.7 系列模型只接受 temperature=1，其余模型按需传值
+const resolveTemperature = (model: string | undefined, desired: number): number =>
+  model && model.includes('kimi-k2.7') ? 1 : desired;
+
 /**
  * Translate text with automatic retry on transient failures
  */
 export const translateText = async (
   text: string,
   apiUrl: string,
-  apiKey: string
+  apiKey: string,
+  model?: string
 ): Promise<string> => {
   const client = createLLMClient({
     ...DEFAULT_CONFIG,
     apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+    model: model || DEFAULT_CONFIG.model,
   }, apiKey);
 
   try {
@@ -263,7 +269,7 @@ export const translateText = async (
         { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
         { role: 'user', content: text },
       ],
-      { temperature: DEFAULT_CONFIG.temperature }
+      { temperature: resolveTemperature(model, DEFAULT_CONFIG.temperature) }
     );
   } catch (error) {
     throw convertError(error);
@@ -277,17 +283,19 @@ export const sendChatMessage = async (
   messages: ChatMessageType[],
   apiUrl: string,
   apiKey: string,
-  context?: string
+  context?: string,
+  model?: string
 ): Promise<string> => {
   const client = createLLMClient({
     ...DEFAULT_CONFIG,
     apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+    model: model || DEFAULT_CONFIG.model,
   }, apiKey);
 
   const apiMessages = buildChatApiMessages(messages, context);
 
   try {
-    return await client.chatCompletion(apiMessages, { temperature: 0.5 });
+    return await client.chatCompletion(apiMessages, { temperature: resolveTemperature(model, 0.5) });
   } catch (error) {
     throw convertError(error);
   }
@@ -303,16 +311,18 @@ export const sendChatMessageStream = async (
   onChunk: (content: string) => void,
   context?: string,
   signal?: AbortSignal,
+  model?: string
 ): Promise<string> => {
   const client = createLLMClient({
     ...DEFAULT_CONFIG,
     apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+    model: model || DEFAULT_CONFIG.model,
   }, apiKey);
 
   const apiMessages = buildChatApiMessages(messages, context);
 
   try {
-    return await client.chatCompletionStream(apiMessages, onChunk, { temperature: 0.5, signal });
+    return await client.chatCompletionStream(apiMessages, onChunk, { temperature: resolveTemperature(model, 0.5), signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;
