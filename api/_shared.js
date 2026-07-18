@@ -66,5 +66,9 @@ export const normalizeBody = (body, upstream, env = process.env) => {
     delete out.thinking;
   }
 
+  // 实测 api.kimi.com 的 kimi-for-coding 系列只接受 temperature=1
+  // （与 reasoning_effort:'none' 路由到 K2.6 无关，模型本身的约束）
+  out.temperature = 1;
+
   return out;
 };
