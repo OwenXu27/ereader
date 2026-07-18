@@ -380,30 +380,52 @@ const ZONE_STYLE = { touchAction: 'manipulation' as const };
 
 const MobileTouchZones = React.memo(({ onPrev, onNext, onToggleHeader, iframeDocRef, translationMapRef, viewerRef }: MobileTouchZonesProps) => {
   const lastCenterTapRef = useRef(0);
+  const touchStartRef = useRef({ x: 0, y: 0 });
 
-  const { prevHandlers, nextHandlers, headerHandlers } = useMemo(() => {
-    const makeTapHandler = (action: () => void) => {
-      let startX = 0;
-      let startY = 0;
-      return {
-        onTouchStart: (e: React.TouchEvent) => {
-          const t = e.touches[0];
-          startX = t.clientX;
-          startY = t.clientY;
-        },
-        onTouchEnd: (e: React.TouchEvent) => {
-          const t = e.changedTouches[0];
-          if (Math.abs(t.clientX - startX) < 20 && Math.abs(t.clientY - startY) < 20) {
-            e.preventDefault();
-            action();
-          }
-        },
-      };
+  const { prevHandlers, nextHandlers, headerHandlers, recordStart, detectSwipe, getTapPoint } = useMemo(() => {
+    const recordStart = (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      touchStartRef.current = { x: t.clientX, y: t.clientY };
     };
+
+    // Horizontal swipe anywhere flips the page; short taps keep zone actions
+    const detectSwipe = (e: React.TouchEvent): boolean => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartRef.current.x;
+      const dy = t.clientY - touchStartRef.current.y;
+      if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (dx < 0) onNext(); else onPrev();
+        return true;
+      }
+      return false;
+    };
+
+    // Returns the tap coordinates when the touch stayed within the tap threshold
+    const getTapPoint = (e: React.TouchEvent): { x: number; y: number } | null => {
+      const t = e.changedTouches[0];
+      if (Math.abs(t.clientX - touchStartRef.current.x) < 20 && Math.abs(t.clientY - touchStartRef.current.y) < 20) {
+        return { x: t.clientX, y: t.clientY };
+      }
+      return null;
+    };
+
+    const makeTapHandler = (action: () => void) => ({
+      onTouchStart: recordStart,
+      onTouchEnd: (e: React.TouchEvent) => {
+        if (detectSwipe(e)) return;
+        if (getTapPoint(e)) {
+          e.preventDefault();
+          action();
+        }
+      },
+    });
     return {
       prevHandlers: makeTapHandler(onPrev),
       nextHandlers: makeTapHandler(onNext),
       headerHandlers: makeTapHandler(onToggleHeader),
+      recordStart,
+      detectSwipe,
+      getTapPoint,
     };
   }, [onPrev, onNext, onToggleHeader]);
 
@@ -434,32 +456,23 @@ const MobileTouchZones = React.memo(({ onPrev, onNext, onToggleHeader, iframeDoc
     }
   }, [iframeDocRef, translationMapRef, viewerRef]);
 
-  const centerHandlers = useMemo(() => {
-    let startX = 0;
-    let startY = 0;
-    return {
-      onTouchStart: (e: React.TouchEvent) => {
-        const t = e.touches[0];
-        startX = t.clientX;
-        startY = t.clientY;
-      },
-      onTouchEnd: (e: React.TouchEvent) => {
-        const t = e.changedTouches[0];
-        const ex = t.clientX;
-        const ey = t.clientY;
-        if (Math.abs(ex - startX) > 20 || Math.abs(ey - startY) > 20) return;
+  const centerHandlers = useMemo(() => ({
+    onTouchStart: recordStart,
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (detectSwipe(e)) return;
+      const point = getTapPoint(e);
+      if (!point) return;
 
-        e.preventDefault();
-        const now = Date.now();
-        if (now - lastCenterTapRef.current < 450) {
-          lastCenterTapRef.current = 0;
-          triggerTranslationAtPoint(ex, ey);
-        } else {
-          lastCenterTapRef.current = now;
-        }
-      },
-    };
-  }, [triggerTranslationAtPoint]);
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastCenterTapRef.current < 450) {
+        lastCenterTapRef.current = 0;
+        triggerTranslationAtPoint(point.x, point.y);
+      } else {
+        lastCenterTapRef.current = now;
+      }
+    },
+  }), [triggerTranslationAtPoint, recordStart, detectSwipe, getTapPoint]);
 
   return (
     <>
