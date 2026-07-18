@@ -1,35 +1,51 @@
-// Vercel Serverless Function：同源代理 LLM 请求，解决浏览器直连
-// api.kimi.com 无 CORS 头的问题。Web Request/Response 签名，直接透传
-// 上游响应体，SSE 流式可用。
+// Vercel Serverless Function（Node.js req/res 签名）：同源代理 LLM 请求，
+// 解决浏览器直连 api.kimi.com 无 CORS 头的问题。SSE 流式逐块透传。
 
 import { resolveUpstream, resolveApiKey, normalizeBody } from '../_shared.js';
 
 export const config = { maxDuration: 60 };
 
-const jsonError = (status, message, type = 'server_config_error') =>
-  new Response(JSON.stringify({ error: { message, type } }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
+const sendJson = (res, status, obj) => {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(obj));
+};
+
+const readBody = (req) =>
+  new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
   });
 
-export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return jsonError(405, 'Method not allowed', 'invalid_request_error');
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: { message: 'Method not allowed', type: 'invalid_request_error' } });
+    return;
   }
 
-  const apiKey = resolveApiKey(process.env, (name) => request.headers.get(name));
+  const apiKey = resolveApiKey(process.env, (name) => req.headers[name]);
   if (!apiKey) {
-    return jsonError(
-      500,
-      'Missing API key. Paste your Kimi Code API key (from kimi.com/code/console) in Settings, or set MOONSHOT_API_KEY on the server.'
-    );
+    sendJson(res, 500, {
+      error: {
+        message:
+          'Missing API key. Paste your Kimi Code API key (from kimi.com/code/console) in Settings, or set MOONSHOT_API_KEY on the server.',
+        type: 'server_config_error',
+      },
+    });
+    return;
   }
 
   let body;
   try {
-    body = await request.json();
+    const raw = await readBody(req);
+    body = raw ? JSON.parse(raw) : {};
   } catch {
-    return jsonError(400, 'Invalid JSON body', 'invalid_request_error');
+    sendJson(res, 400, { error: { message: 'Invalid JSON body', type: 'invalid_request_error' } });
+    return;
   }
 
   const upstream = resolveUpstream(process.env);
@@ -45,15 +61,20 @@ export default async function handler(request) {
       body: JSON.stringify(normalizeBody(body, upstream, process.env)),
     });
   } catch (err) {
-    return jsonError(502, String(err?.message || err), 'upstream_fetch_error');
+    sendJson(res, 502, { error: { message: String(err?.message || err), type: 'upstream_fetch_error' } });
+    return;
   }
 
-  // 状态码与响应体（含 SSE 流）原样透传
-  return new Response(upstreamRes.body, {
-    status: upstreamRes.status,
-    headers: {
-      'Content-Type': upstreamRes.headers.get('content-type') || 'application/json',
-      'Cache-Control': 'no-cache',
-    },
-  });
+  res.statusCode = upstreamRes.status;
+  res.setHeader('Content-Type', upstreamRes.headers.get('content-type') || 'application/json');
+  res.setHeader('Cache-Control', 'no-cache');
+
+  if (upstreamRes.body) {
+    // 客户端断开时取消上游流
+    req.on('close', () => upstreamRes.body.cancel().catch(() => {}));
+    for await (const chunk of upstreamRes.body) {
+      res.write(chunk);
+    }
+  }
+  res.end();
 }
