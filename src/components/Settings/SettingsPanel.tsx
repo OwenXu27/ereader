@@ -242,16 +242,20 @@ export const SettingsPanel: React.FC = () => {
                 <div className="mt-4">
                   <div className="flex items-center gap-4">
                     <span className="text-[11px] text-theme-muted font-light">A</span>
-                    <input 
-                      type="range" 
-                      min="12" 
-                      max="32" 
+                    <input
+                      type="range"
+                      min="12"
+                      max="32"
                       step="1"
                       value={settings.fontSize}
                       onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value) })}
-                      className="flex-1 h-1 bg-theme-elevated rounded-full appearance-none cursor-pointer accent-warm-500"
+                      className="flex-1 h-5 appearance-none cursor-pointer bg-transparent accent-warm-500"
                       style={{
-                        backgroundImage: `linear-gradient(to right, var(--warm-500) 0%, var(--warm-500) ${(settings.fontSize - 12) / 20 * 100}%, var(--theme-elevated) ${(settings.fontSize - 12) / 20 * 100}%, var(--theme-elevated) 100%)`
+                        // 4px visual track centered in a 20px-tall hit area
+                        backgroundImage: `linear-gradient(to right, var(--accent-warm) 0%, var(--accent-warm) ${(settings.fontSize - 12) / 20 * 100}%, var(--bg-elevated) ${(settings.fontSize - 12) / 20 * 100}%, var(--bg-elevated) 100%)`,
+                        backgroundSize: '100% 4px',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
                       }}
                     />
                     <span className="text-[14px] text-theme-muted font-light">A</span>
@@ -286,7 +290,7 @@ export const SettingsPanel: React.FC = () => {
                     className="mt-4 space-y-4 pl-1"
                   >
                     <div className="space-y-2">
-                      <label className="text-[11px] text-theme-secondary flex items-center gap-1">
+                      <label htmlFor="settings-api-url" className="text-[11px] text-theme-secondary flex items-center gap-1 cursor-text w-fit">
                         <Globe size={11} strokeWidth={1.5} className="opacity-50" />
                         {t('settings.apiUrl') as string}
                       </label>
@@ -301,6 +305,7 @@ export const SettingsPanel: React.FC = () => {
                         style={{ borderWidth: '0.5px', borderColor: settings.apiUrl ? undefined : 'var(--border-primary)' }}
                       >
                         <input
+                          id="settings-api-url"
                           type="text"
                           value={settings.apiUrl}
                           onChange={(e) => updateSettings({ apiUrl: e.target.value })}
@@ -317,7 +322,7 @@ export const SettingsPanel: React.FC = () => {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] text-theme-secondary flex items-center gap-1">
+                      <label htmlFor="settings-api-key" className="text-[11px] text-theme-secondary flex items-center gap-1 cursor-text w-fit">
                         <ShieldAlert size={11} strokeWidth={1.5} className="opacity-50" />
                         {t('settings.apiKey') as string}
                       </label>
@@ -332,6 +337,7 @@ export const SettingsPanel: React.FC = () => {
                         style={{ borderWidth: '0.5px', borderColor: settings.apiKey ? undefined : 'var(--border-primary)' }}
                       >
                         <input
+                          id="settings-api-key"
                           type="password"
                           value={settings.apiKey}
                           onChange={(e) => updateSettings({ apiKey: e.target.value })}
@@ -348,7 +354,7 @@ export const SettingsPanel: React.FC = () => {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] text-theme-secondary flex items-center gap-1">
+                      <label htmlFor="settings-model" className="text-[11px] text-theme-secondary flex items-center gap-1 cursor-text w-fit">
                         <Cpu size={11} strokeWidth={1.5} className="opacity-50" />
                         {t('settings.model') as string}
                       </label>
@@ -363,6 +369,7 @@ export const SettingsPanel: React.FC = () => {
                         style={{ borderWidth: '0.5px', borderColor: settings.model ? undefined : 'var(--border-primary)' }}
                       >
                         <input
+                          id="settings-model"
                           type="text"
                           value={settings.model}
                           onChange={(e) => updateSettings({ model: e.target.value })}
