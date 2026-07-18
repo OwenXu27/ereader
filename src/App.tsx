@@ -92,8 +92,8 @@ function App() {
   }, [currentBookId]);
 
   return (
-    <div 
-      className={`h-full w-full bg-theme-base text-theme-primary flex overflow-hidden font-reading ${theme.selection}`}
+    <div
+      className={`h-full w-full bg-theme-base text-theme-primary flex overflow-hidden font-reading ${theme.selection} pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`}
       style={{ fontWeight: uiFontWeight }}
     >
       {isBookLoading ? (
