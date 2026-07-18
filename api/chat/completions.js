@@ -69,6 +69,12 @@ export default async function handler(req, res) {
   res.setHeader('Content-Type', upstreamRes.headers.get('content-type') || 'application/json');
   res.setHeader('Cache-Control', 'no-cache');
 
+  if (!upstreamRes.ok) {
+    // 排障用：在 Vercel 日志里留下游状态与报错摘要（不含 key）
+    const snippet = (await upstreamRes.clone().text().catch(() => '')).slice(0, 300);
+    console.error(`[proxy] upstream ${upstreamRes.status} from ${new URL(upstream).hostname}: ${snippet}`);
+  }
+
   if (upstreamRes.body) {
     // 客户端断开时取消上游流
     req.on('close', () => upstreamRes.body.cancel().catch(() => {}));
