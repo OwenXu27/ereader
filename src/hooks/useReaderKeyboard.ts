@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import type { Rendition } from 'epubjs';
 import type { QuickPromptMode } from '../services/llm';
+import { useBookStore } from '../store/useBookStore';
 
 interface UseReaderKeyboardOptions {
   renditionRef: React.MutableRefObject<Rendition | null>;
@@ -51,6 +52,9 @@ export const useReaderKeyboard = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Let the settings panel (and any other modal UI) receive keys normally
+      if (useBookStore.getState().isSettingsOpen) return;
+
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
@@ -85,6 +89,7 @@ export const useReaderKeyboard = ({
     };
 
     const handleQuickPromptKey = (e: KeyboardEvent) => {
+      if (useBookStore.getState().isSettingsOpen) return;
       if (!e.altKey || e.metaKey || e.ctrlKey) return;
       if (e.code === 'KeyG' || e.code === 'KeyD' || e.code === 'KeyC') {
         e.preventDefault();

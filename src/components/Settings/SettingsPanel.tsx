@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useBookStore, type UIFontFamily, type UIFontWeight, type UIFontPixelStyle } from '../../store/useBookStore';
 import { useTranslation, type Language } from '../../i18n';
 import type { ThemeType } from '../../hooks/useTheme';
@@ -9,6 +9,27 @@ import { AnimatePresence, motion } from 'framer-motion';
 export const SettingsPanel: React.FC = () => {
   const { settings, updateSettings, isSettingsOpen, setSettingsOpen } = useBookStore();
   const { t, language, setLanguage } = useTranslation();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Forward wheel events landing outside the scrollable content (backdrop,
+  // panel header) to the content scroller — otherwise scrolling feels dead
+  // anywhere but directly over the content area.
+  const handleWheel = (e: React.WheelEvent) => {
+    const el = contentRef.current;
+    if (!el || el.contains(e.target as Node)) return;
+    const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    el.scrollTop += delta;
+  };
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSettingsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isSettingsOpen, setSettingsOpen]);
 
   const getFontSizeLabel = (size: number) => {
     if (size < 16) return (t('settings.fontSizeLabel.small') as string);
@@ -26,6 +47,7 @@ export const SettingsPanel: React.FC = () => {
           transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] px-4 bg-ink-900/20 backdrop-blur-sm"
           onClick={() => setSettingsOpen(false)}
+          onWheel={handleWheel}
         >
           <motion.div 
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -65,7 +87,7 @@ export const SettingsPanel: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="px-6 pb-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div ref={contentRef} className="px-6 pb-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
               
               {/* Language Section */}
               <section>
