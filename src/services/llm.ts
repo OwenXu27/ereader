@@ -1,13 +1,14 @@
 import { createLLMClient, type LLMConfig, type ChatMessage } from '../utils/llm-client';
 
 // Default configuration from environment variables
+// 默认模型 kimi-k2.6：即 Kimi Code 文档中「关闭 thinking 的 K2.7 Code」的实际路由目标
 const DEFAULT_CONFIG: LLMConfig = {
   apiUrl: import.meta.env?.VITE_MOONSHOT_CHAT_COMPLETIONS_URL || '/api/chat/completions',
-  model: import.meta.env?.VITE_MOONSHOT_MODEL || 'kimi-k2.7-code-highspeed',
+  model: import.meta.env?.VITE_MOONSHOT_MODEL || 'kimi-k2.6',
   temperature: (() => {
     const v = import.meta.env?.VITE_MOONSHOT_TEMPERATURE;
     const n = v ? Number(v) : NaN;
-    return Number.isFinite(n) ? n : 0.3;
+    return Number.isFinite(n) ? n : 0.6;
   })(),
 };
 
@@ -244,9 +245,33 @@ export interface ChatMessageType {
 // API 函数
 // ============================================
 
-// kimi-k2.7 系列模型只接受 temperature=1，其余模型按需传值
-const resolveTemperature = (model: string | undefined, desired: number): number =>
-  model && model.includes('kimi-k2.7') ? 1 : desired;
+// 网关对不同模型的 temperature 有强制约束（实测）：
+// - kimi-k2.7 系列（thinking 常开）：只接受 1
+// - kimi-k2.6 关闭 thinking 后：只接受 0.6
+const resolveTemperature = (model: string | undefined, desired: number): number => {
+  if (!model) return desired;
+  if (model.includes('kimi-k2.7')) return 1;
+  if (model.includes('kimi-k2.6')) return 0.6;
+  return desired;
+};
+
+// kimi-k2.6 默认关闭 thinking（即 Kimi Code 中「K2.7 Code 关思考」的实际路由）
+// 网关要求此时必须显式传 thinking.type=disabled，否则默认走思考模式
+const resolveThinking = (model: string | undefined): LLMConfig['thinking'] | undefined =>
+  model && model.includes('kimi-k2.6') ? { type: 'disabled' } : undefined;
+
+const createClient = (apiUrl: string, apiKey: string, model?: string) => {
+  const effectiveModel = model || DEFAULT_CONFIG.model;
+  return {
+    client: createLLMClient({
+      ...DEFAULT_CONFIG,
+      apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
+      model: effectiveModel,
+      thinking: resolveThinking(effectiveModel),
+    }, apiKey),
+    effectiveModel,
+  };
+};
 
 /**
  * Translate text with automatic retry on transient failures
@@ -257,11 +282,7 @@ export const translateText = async (
   apiKey: string,
   model?: string
 ): Promise<string> => {
-  const client = createLLMClient({
-    ...DEFAULT_CONFIG,
-    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
-    model: model || DEFAULT_CONFIG.model,
-  }, apiKey);
+  const { client, effectiveModel } = createClient(apiUrl, apiKey, model);
 
   try {
     return await client.chatCompletion(
@@ -269,7 +290,7 @@ export const translateText = async (
         { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
         { role: 'user', content: text },
       ],
-      { temperature: resolveTemperature(model, DEFAULT_CONFIG.temperature) }
+      { temperature: resolveTemperature(effectiveModel, DEFAULT_CONFIG.temperature) }
     );
   } catch (error) {
     throw convertError(error);
@@ -286,16 +307,12 @@ export const sendChatMessage = async (
   context?: string,
   model?: string
 ): Promise<string> => {
-  const client = createLLMClient({
-    ...DEFAULT_CONFIG,
-    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
-    model: model || DEFAULT_CONFIG.model,
-  }, apiKey);
+  const { client, effectiveModel } = createClient(apiUrl, apiKey, model);
 
   const apiMessages = buildChatApiMessages(messages, context);
 
   try {
-    return await client.chatCompletion(apiMessages, { temperature: resolveTemperature(model, 0.5) });
+    return await client.chatCompletion(apiMessages, { temperature: resolveTemperature(effectiveModel, 0.5) });
   } catch (error) {
     throw convertError(error);
   }
@@ -313,16 +330,12 @@ export const sendChatMessageStream = async (
   signal?: AbortSignal,
   model?: string
 ): Promise<string> => {
-  const client = createLLMClient({
-    ...DEFAULT_CONFIG,
-    apiUrl: apiUrl || DEFAULT_CONFIG.apiUrl,
-    model: model || DEFAULT_CONFIG.model,
-  }, apiKey);
+  const { client, effectiveModel } = createClient(apiUrl, apiKey, model);
 
   const apiMessages = buildChatApiMessages(messages, context);
 
   try {
-    return await client.chatCompletionStream(apiMessages, onChunk, { temperature: resolveTemperature(model, 0.5), signal });
+    return await client.chatCompletionStream(apiMessages, onChunk, { temperature: resolveTemperature(effectiveModel, 0.5), signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;

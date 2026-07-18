@@ -389,7 +389,7 @@ export const SettingsPanel: React.FC = () => {
                           type="text"
                           value={settings.model}
                           onChange={(e) => updateSettings({ model: e.target.value })}
-                          placeholder="kimi-k2.7-code-highspeed"
+                          placeholder="kimi-k2.6"
                           className={cn(
                             "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
                             "text-theme-primary placeholder:text-theme-muted-50",

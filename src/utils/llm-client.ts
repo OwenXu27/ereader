@@ -2,6 +2,8 @@ export interface LLMConfig {
   apiUrl: string;
   model: string;
   temperature: number;
+  /** 显式开关 thinking（仅部分模型支持，如 kimi-k2.6 关闭 thinking 后即 K2.6 非思考路由） */
+  thinking?: { type: 'enabled' | 'disabled' };
 }
 
 export interface ChatMessage {
@@ -170,6 +172,7 @@ export const createLLMClient = (config: LLMConfig, apiKey?: string) => {
           messages,
           temperature: options?.temperature ?? config.temperature,
           stream: false,
+          ...(config.thinking ? { thinking: config.thinking } : {}),
         }),
       });
 
@@ -207,6 +210,7 @@ export const createLLMClient = (config: LLMConfig, apiKey?: string) => {
           messages,
           temperature: options?.temperature ?? config.temperature,
           stream: true,
+          ...(config.thinking ? { thinking: config.thinking } : {}),
         }),
         signal: options?.signal,
       });
