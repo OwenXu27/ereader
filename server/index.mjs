@@ -1,5 +1,10 @@
 import express from "express";
 import dotenv from "dotenv";
+import {
+  resolveUpstream,
+  resolveApiKey,
+  normalizeBody,
+} from "../api/_shared.js";
 
 // Load env from .env.local first, then .env
 dotenv.config({ path: ".env.local" });
@@ -9,20 +14,19 @@ const app = express();
 app.use(express.json({ limit: "2mb" }));
 
 const PORT = Number(process.env.PORT || 5177);
-const UPSTREAM =
-  process.env.MOONSHOT_UPSTREAM || "https://api.moonshot.cn/v1/chat/completions";
+const UPSTREAM = resolveUpstream(process.env);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
 app.post("/api/chat/completions", async (req, res) => {
-  const apiKey = process.env.MOONSHOT_API_KEY;
+  const apiKey = resolveApiKey(process.env, (name) => req.headers[name]);
   if (!apiKey) {
     return res.status(500).json({
       error: {
         message:
-          "Server missing MOONSHOT_API_KEY. Set it in .env.local (not starting with VITE_).",
+          "Missing API key. Set MOONSHOT_API_KEY in .env.local, or paste your Kimi Code API key in Settings.",
         type: "server_config_error",
       },
     });
@@ -35,7 +39,7 @@ app.post("/api/chat/completions", async (req, res) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(req.body ?? {}),
+      body: JSON.stringify(normalizeBody(req.body ?? {}, UPSTREAM, process.env)),
     });
 
     const contentType = upstreamRes.headers.get("content-type") || "";

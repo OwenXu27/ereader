@@ -64,9 +64,16 @@ export const createLLMClient = (config: LLMConfig, apiKey?: string) => {
 
   const responsesEndpoint = deriveResponsesUrl(config.apiUrl);
 
+  // 绝对地址：浏览器直连上游，用标准 Authorization 头（需要上游放行 CORS）。
+  // 相对地址（同源代理）：改用 X-API-Key 头，由本地 dev server / Vercel
+  // Function 读取并转发，避免误把用户 key 发给非同源目标。
   const buildHeaders = () => ({
     'Content-Type': 'application/json',
-    ...(isAbsolute && apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    ...(apiKey
+      ? isAbsolute
+        ? { Authorization: `Bearer ${apiKey}` }
+        : { 'X-API-Key': apiKey }
+      : {}),
   });
 
   const validateAuth = () => {
