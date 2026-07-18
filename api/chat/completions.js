@@ -2,7 +2,7 @@
 // api.kimi.com 无 CORS 头的问题。Web Request/Response 签名，直接透传
 // 上游响应体，SSE 流式可用。
 
-import { resolveUpstream, resolveApiKey, normalizeBody } from './_shared.js';
+import { resolveUpstream, resolveApiKey, normalizeBody } from '../_shared.js';
 
 export const config = { maxDuration: 60 };
 
