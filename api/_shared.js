@@ -18,13 +18,13 @@ export const resolveUpstream = (env = process.env) =>
  * 粘贴自己的 Kimi Code key 即可。
  */
 export const resolveApiKey = (env, getHeader) => {
-  if (env.MOONSHOT_API_KEY) return env.MOONSHOT_API_KEY;
+  if (env.MOONSHOT_API_KEY) return env.MOONSHOT_API_KEY.trim();
   const xKey = getHeader('x-api-key');
-  if (xKey) return xKey;
+  if (xKey && xKey.trim()) return xKey.trim();
   const auth = getHeader('authorization');
   if (auth) {
-    const m = /^Bearer\s+(.+)$/i.exec(auth);
-    if (m) return m[1];
+    const m = /^Bearer\s+(.+)$/i.exec(auth.trim());
+    if (m) return m[1].trim();
   }
   return null;
 };
