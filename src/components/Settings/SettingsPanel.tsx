@@ -10,6 +10,7 @@ export const SettingsPanel: React.FC = () => {
   const { settings, updateSettings, isSettingsOpen, setSettingsOpen } = useBookStore();
   const { t, language, setLanguage } = useTranslation();
   const contentRef = useRef<HTMLDivElement>(null);
+  const backdropMouseDownRef = useRef(false);
 
   // Forward wheel events landing outside the scrollable content (backdrop,
   // panel header) to the content scroller — otherwise scrolling feels dead
@@ -46,7 +47,16 @@ export const SettingsPanel: React.FC = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] px-4 bg-ink-900/20 backdrop-blur-sm"
-          onClick={() => setSettingsOpen(false)}
+          onMouseDown={(e) => {
+            // Only counts as a backdrop click if the press also started on the
+            // backdrop — prevents closing when a drag inside the panel
+            // (e.g. selecting input text) ends outside of it.
+            backdropMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={() => {
+            if (backdropMouseDownRef.current) setSettingsOpen(false);
+            backdropMouseDownRef.current = false;
+          }}
           onWheel={handleWheel}
         >
           <motion.div 
@@ -282,7 +292,7 @@ export const SettingsPanel: React.FC = () => {
                       </label>
                       <div
                         className={cn(
-                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "flex items-center rounded-lg border",
                           "bg-theme-input",
                           settings.apiUrl && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -290,13 +300,13 @@ export const SettingsPanel: React.FC = () => {
                         )}
                         style={{ borderWidth: '0.5px', borderColor: settings.apiUrl ? undefined : 'var(--border-primary)' }}
                       >
-                        <input 
+                        <input
                           type="text"
                           value={settings.apiUrl}
                           onChange={(e) => updateSettings({ apiUrl: e.target.value })}
                           placeholder="http://localhost:5177/api/chat/completions"
                           className={cn(
-                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
                             "text-theme-primary placeholder:text-theme-muted/50",
                             "focus:outline-none"
                           )}
@@ -313,7 +323,7 @@ export const SettingsPanel: React.FC = () => {
                       </label>
                       <div
                         className={cn(
-                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "flex items-center rounded-lg border",
                           "bg-theme-input",
                           settings.apiKey && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -321,13 +331,13 @@ export const SettingsPanel: React.FC = () => {
                         )}
                         style={{ borderWidth: '0.5px', borderColor: settings.apiKey ? undefined : 'var(--border-primary)' }}
                       >
-                        <input 
+                        <input
                           type="password"
                           value={settings.apiKey}
                           onChange={(e) => updateSettings({ apiKey: e.target.value })}
                           placeholder="sk-..."
                           className={cn(
-                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
                             "text-theme-primary placeholder:text-theme-muted/50",
                             "focus:outline-none"
                           )}
@@ -344,7 +354,7 @@ export const SettingsPanel: React.FC = () => {
                       </label>
                       <div
                         className={cn(
-                          "flex items-center rounded-lg border px-3 py-2.5",
+                          "flex items-center rounded-lg border",
                           "bg-theme-input",
                           settings.model && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -358,7 +368,7 @@ export const SettingsPanel: React.FC = () => {
                           onChange={(e) => updateSettings({ model: e.target.value })}
                           placeholder="kimi-k2.7-code-highspeed"
                           className={cn(
-                            "w-full text-[12px] leading-relaxed bg-transparent",
+                            "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
                             "text-theme-primary placeholder:text-theme-muted/50",
                             "focus:outline-none"
                           )}
@@ -595,12 +605,13 @@ const PixelStyleOption = ({ style, label, current, onClick }: {
 };
 
 // Minimal Switch Component - Refined
+// The -m-2/p-2 trick enlarges the click target without changing the visuals
 const MinimalSwitch = ({ checked, onChange, variant = 'default' }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   variant?: 'default' | 'warning';
 }) => (
-  <label className="relative inline-flex items-center cursor-pointer group">
+  <label className="relative inline-flex items-center cursor-pointer group -m-2 p-2">
     <input 
       type="checkbox" 
       checked={checked}
