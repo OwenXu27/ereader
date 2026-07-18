@@ -17,6 +17,30 @@ export default {
         'pixel-triangle': ['"Geist Pixel Triangle"', 'monospace'],
       },
       colors: {
+        // 主题变量色 - 引用 CSS 变量，使 hover:/active:/peer-checked: 等变体
+        // 及 /40 /60 /80 透明度修饰符能被 Tailwind 正常生成
+        'theme-base': 'var(--bg-base)',
+        'theme-surface': 'var(--bg-surface)',
+        'theme-elevated': 'var(--bg-elevated)',
+        'theme-input': 'var(--bg-input)',
+        'theme-primary': 'var(--text-primary)',
+        'theme-secondary': 'var(--text-secondary)',
+        'theme-muted': 'var(--text-muted)',
+        // 透明度档位的主题色 - 用 color-mix 实现（Tailwind 无法对 var() 颜色
+        // 应用 /60 这类透明度修饰符，所以改用独立色名，如 bg-theme-elevated-60）
+        'theme-elevated-30': 'color-mix(in oklab, var(--bg-elevated) 30%, transparent)',
+        'theme-elevated-40': 'color-mix(in oklab, var(--bg-elevated) 40%, transparent)',
+        'theme-elevated-60': 'color-mix(in oklab, var(--bg-elevated) 60%, transparent)',
+        'theme-elevated-80': 'color-mix(in oklab, var(--bg-elevated) 80%, transparent)',
+        'theme-muted-10': 'color-mix(in oklab, var(--text-muted) 10%, transparent)',
+        'theme-muted-30': 'color-mix(in oklab, var(--text-muted) 30%, transparent)',
+        'theme-muted-50': 'color-mix(in oklab, var(--text-muted) 50%, transparent)',
+        'theme-muted-60': 'color-mix(in oklab, var(--text-muted) 60%, transparent)',
+        'theme-muted-70': 'color-mix(in oklab, var(--text-muted) 70%, transparent)',
+        'theme-primary-80': 'color-mix(in oklab, var(--text-primary) 80%, transparent)',
+        'theme-base-10': 'color-mix(in oklab, var(--bg-base) 10%, transparent)',
+        'theme-base-50': 'color-mix(in oklab, var(--bg-base) 50%, transparent)',
+        'theme-base-90': 'color-mix(in oklab, var(--bg-base) 90%, transparent)',
         // 纸张色系 - 护眼暖白
         paper: {
           50: '#FFFCF5',   // Light 主背景

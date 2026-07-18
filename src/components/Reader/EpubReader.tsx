@@ -189,8 +189,8 @@ export const EpubReader = ({ bookData, initialCfi, onClose }: EpubReaderProps) =
           className={cn(
             "w-full text-left py-2 px-3 rounded-md text-sm font-ui",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-            "hover:scale-[1.01] hover:bg-theme-elevated/60",
-            "active:scale-[0.99] active:bg-theme-elevated/80",
+            "hover:scale-[1.01] hover:bg-theme-elevated-60",
+            "active:scale-[0.99] active:bg-theme-elevated-80",
             currentChapter === item.label && "font-medium bg-warm-500 text-white hover:bg-warm-500 hover:scale-100"
           )}
           style={{ paddingLeft: `${12 + level * 16}px` }}
@@ -530,12 +530,12 @@ const HeaderIconButton = ({ onClick, children, title, active, highlight }: {
       "w-9 h-9 flex items-center justify-center rounded-md",
       "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
       "hover:scale-105 active:scale-95",
-      active && "text-warm-500 hover:bg-theme-elevated/60",
-      !active && highlight && "text-theme-primary hover:bg-theme-elevated/60",
+      active && "text-warm-500 hover:bg-theme-elevated-60",
+      !active && highlight && "text-theme-primary hover:bg-theme-elevated-60",
       !active && !highlight && [
         "text-theme-secondary",
-        "hover:text-theme-primary hover:bg-theme-elevated/60",
-        "active:bg-theme-elevated/80"
+        "hover:text-theme-primary hover:bg-theme-elevated-60",
+        "active:bg-theme-elevated-80"
       ]
     )}
   >

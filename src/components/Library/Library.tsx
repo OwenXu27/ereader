@@ -133,7 +133,7 @@ export const Library: React.FC = () => {
             <h1 className="text-[17px] font-medium text-theme-primary tracking-[-0.02em]">
               {t('library.title') as string}
             </h1>
-            <span className="text-[13px] tabular-nums text-theme-muted/60">
+            <span className="text-[13px] tabular-nums text-theme-muted-60">
               {fmtNum(books.length)}
             </span>
           </div>
@@ -176,10 +176,10 @@ export const Library: React.FC = () => {
               </span>
             )}
             {readingCount > 0 && completedCount > 0 && (
-              <span className="text-theme-muted/30">/</span>
+              <span className="text-theme-muted-30">/</span>
             )}
             {completedCount > 0 && (
-              <span className="text-theme-muted/50">
+              <span className="text-theme-muted-50">
                 {t('library.completed') as string} {fmtNum(completedCount)}
               </span>
             )}
@@ -201,7 +201,7 @@ export const Library: React.FC = () => {
       >
         {/* Error Message */}
         {error && (
-          <div className="mb-8 p-3 text-[11px] text-theme-primary bg-theme-elevated/30 rounded-md max-w-md animate-in fade-in slide-in-from-top-2 duration-300" style={{ border: '0.5px solid var(--border-primary)' }}>
+          <div className="mb-8 p-3 text-[11px] text-theme-primary bg-theme-elevated-30 rounded-md max-w-md animate-in fade-in slide-in-from-top-2 duration-300" style={{ border: '0.5px solid var(--border-primary)' }}>
             {error}
           </div>
         )}
@@ -261,7 +261,7 @@ export const Library: React.FC = () => {
                     "px-3.5 py-1.5 rounded-md text-[11px] font-medium",
                     "text-theme-secondary",
                     "transition-all duration-150",
-                    "hover:bg-theme-elevated/60",
+                    "hover:bg-theme-elevated-60",
                     "active:scale-95"
                   )}
                 >
@@ -307,8 +307,8 @@ const IconButton = ({ onClick, children, title, disabled, variant = 'default' }:
       "hover:scale-105 active:scale-95",
       variant === 'default' && [
         "text-theme-muted",
-        "hover:text-theme-primary hover:bg-theme-elevated/60",
-        "active:bg-theme-elevated/80"
+        "hover:text-theme-primary hover:bg-theme-elevated-60",
+        "active:bg-theme-elevated-80"
       ],
       variant === 'primary' && [
         "bg-theme-elevated text-theme-primary",
@@ -359,7 +359,7 @@ const BookCard = React.memo(({ book, index, onClick, onRemove }: BookCardProps) 
     {/* Progress Indicator */}
     {book.progress > 0 && (
       <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
-        <div className="flex-1 h-[2.5px] bg-theme-base/50 rounded-full overflow-hidden">
+        <div className="flex-1 h-[2.5px] bg-theme-base-50 rounded-full overflow-hidden">
           <div 
             className="h-full bg-warm-500 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${book.progress * 100}%` }} 
@@ -376,7 +376,7 @@ const BookCard = React.memo(({ book, index, onClick, onRemove }: BookCardProps) 
       onClick={onRemove}
       className={cn(
         "absolute top-2 right-2 w-7 h-7 flex items-center justify-center",
-        "bg-theme-base/90 backdrop-blur-sm text-theme-muted rounded-full",
+        "bg-theme-base-90 backdrop-blur-sm text-theme-muted rounded-full",
         "opacity-0 translate-y-1 scale-90",
         "group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100",
         "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] delay-75",
@@ -389,7 +389,7 @@ const BookCard = React.memo(({ book, index, onClick, onRemove }: BookCardProps) 
 
     {/* Hover overlay - subtle */}
     <div className={cn(
-      "absolute inset-0 bg-gradient-to-t from-theme-base/10 to-transparent",
+      "absolute inset-0 bg-gradient-to-t from-theme-base-10 to-transparent",
       "opacity-0 group-hover:opacity-100",
       "transition-opacity duration-300 pointer-events-none"
     )} />
@@ -410,13 +410,13 @@ const EmptyState = ({ onAdd, t }: EmptyStateProps) => (
         <BookIcon size={24} className="opacity-20" strokeWidth={1} />
       </div>
       {/* Decorative lines */}
-      <div className="absolute -right-4 top-1/2 w-6 h-px bg-theme-muted/10" />
-      <div className="absolute -right-4 top-1/2 translate-y-2 w-4 h-px bg-theme-muted/10" />
+      <div className="absolute -right-4 top-1/2 w-6 h-px bg-theme-muted-10" />
+      <div className="absolute -right-4 top-1/2 translate-y-2 w-4 h-px bg-theme-muted-10" />
     </div>
 
     {/* Text content */}
-    <p className="text-[13px] text-theme-primary/80 mb-1">{t('library.empty') as string}</p>
-    <p className="text-[11px] text-theme-muted/60 mb-6">{t('library.emptyHint') as string}</p>
+    <p className="text-[13px] text-theme-primary-80 mb-1">{t('library.empty') as string}</p>
+    <p className="text-[11px] text-theme-muted-60 mb-6">{t('library.emptyHint') as string}</p>
 
     {/* Action - Refined button */}
     <button

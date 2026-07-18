@@ -32,6 +32,22 @@ export const SettingsPanel: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isSettingsOpen, setSettingsOpen]);
 
+  // When AI settings are enabled, scroll the freshly-expanded section into
+  // view so the toggle's effect is visible (it expands below the fold).
+  const prevTranslationEnabledRef = useRef(settings.translationEnabled);
+  useEffect(() => {
+    const wasEnabled = prevTranslationEnabledRef.current;
+    prevTranslationEnabledRef.current = settings.translationEnabled;
+    if (!wasEnabled && settings.translationEnabled && isSettingsOpen) {
+      const el = contentRef.current;
+      if (!el) return;
+      const timer = setTimeout(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      }, 220); // wait for the expand animation
+      return () => clearTimeout(timer);
+    }
+  }, [settings.translationEnabled, isSettingsOpen]);
+
   const getFontSizeLabel = (size: number) => {
     if (size < 16) return (t('settings.fontSizeLabel.small') as string);
     if (size < 20) return (t('settings.fontSizeLabel.medium') as string);
@@ -77,7 +93,7 @@ export const SettingsPanel: React.FC = () => {
                   <h2 className="text-[15px] font-normal text-theme-primary tracking-[-0.02em]">
                     {t('settings.title') as string}
                   </h2>
-                  <p className="text-[11px] text-theme-muted/70 mt-0.5 tracking-wide">
+                  <p className="text-[11px] text-theme-muted-70 mt-0.5 tracking-wide">
                     {t('settings.subtitle') as string}
                   </p>
                 </div>
@@ -87,8 +103,8 @@ export const SettingsPanel: React.FC = () => {
                     "w-8 h-8 flex items-center justify-center rounded-md",
                     "text-theme-muted",
                     "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                    "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated/60",
-                    "active:scale-95 active:bg-theme-elevated/80"
+                    "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated-60",
+                    "active:scale-95 active:bg-theme-elevated-80"
                   )}
                 >
                   <X size={15} strokeWidth={1.5} />
@@ -264,7 +280,7 @@ export const SettingsPanel: React.FC = () => {
                     <span className="text-[11px] tabular-nums text-theme-primary">
                       {settings.fontSize}px
                     </span>
-                    <span className="text-[11px] text-theme-muted/50">
+                    <span className="text-[11px] text-theme-muted-50">
                       {getFontSizeLabel(settings.fontSize)}
                     </span>
                   </div>
@@ -300,7 +316,7 @@ export const SettingsPanel: React.FC = () => {
                           "bg-theme-input",
                           settings.apiUrl && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                          "hover:border-theme-muted/30"
+                          "hover:border-theme-muted-30"
                         )}
                         style={{ borderWidth: '0.5px', borderColor: settings.apiUrl ? undefined : 'var(--border-primary)' }}
                       >
@@ -312,12 +328,12 @@ export const SettingsPanel: React.FC = () => {
                           placeholder="http://localhost:5177/api/chat/completions"
                           className={cn(
                             "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
-                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "text-theme-primary placeholder:text-theme-muted-50",
                             "focus:outline-none"
                           )}
                         />
                       </div>
-                      <p className="text-[11px] text-theme-muted/50 leading-relaxed">
+                      <p className="text-[11px] text-theme-muted-50 leading-relaxed">
                         {t('settings.apiUrlHint') as string}
                       </p>
                     </div>
@@ -332,7 +348,7 @@ export const SettingsPanel: React.FC = () => {
                           "bg-theme-input",
                           settings.apiKey && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                          "hover:border-theme-muted/30"
+                          "hover:border-theme-muted-30"
                         )}
                         style={{ borderWidth: '0.5px', borderColor: settings.apiKey ? undefined : 'var(--border-primary)' }}
                       >
@@ -344,12 +360,12 @@ export const SettingsPanel: React.FC = () => {
                           placeholder="sk-..."
                           className={cn(
                             "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
-                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "text-theme-primary placeholder:text-theme-muted-50",
                             "focus:outline-none"
                           )}
                         />
                       </div>
-                      <p className="text-[11px] text-theme-muted/50">
+                      <p className="text-[11px] text-theme-muted-50">
                         {t('settings.apiKeyHint') as string}
                       </p>
                     </div>
@@ -364,7 +380,7 @@ export const SettingsPanel: React.FC = () => {
                           "bg-theme-input",
                           settings.model && "border-warm-500/50",
                           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                          "hover:border-theme-muted/30"
+                          "hover:border-theme-muted-30"
                         )}
                         style={{ borderWidth: '0.5px', borderColor: settings.model ? undefined : 'var(--border-primary)' }}
                       >
@@ -376,12 +392,12 @@ export const SettingsPanel: React.FC = () => {
                           placeholder="kimi-k2.7-code-highspeed"
                           className={cn(
                             "w-full px-3 py-2.5 rounded-lg text-[12px] leading-relaxed bg-transparent",
-                            "text-theme-primary placeholder:text-theme-muted/50",
+                            "text-theme-primary placeholder:text-theme-muted-50",
                             "focus:outline-none"
                           )}
                         />
                       </div>
-                      <p className="text-[11px] text-theme-muted/50">
+                      <p className="text-[11px] text-theme-muted-50">
                         {t('settings.modelHint') as string}
                       </p>
                     </div>
@@ -399,7 +415,7 @@ export const SettingsPanel: React.FC = () => {
                     variant="warning"
                   />
                 </div>
-                <p className="mt-2 text-[11px] text-theme-muted/50 leading-relaxed">
+                <p className="mt-2 text-[11px] text-theme-muted-50 leading-relaxed">
                   {t('settings.scriptWarning') as string}
                 </p>
               </section>
@@ -413,7 +429,7 @@ export const SettingsPanel: React.FC = () => {
 
 // Section Header Component
 const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div className="flex items-center gap-2 text-theme-muted/70">
+  <div className="flex items-center gap-2 text-theme-muted-70">
     <span className="opacity-70">{icon}</span>
     <span className="text-[11px] uppercase tracking-[0.1em] font-medium">{label}</span>
   </div>
@@ -438,8 +454,8 @@ const LanguageOption = ({ code, label, current, onClick }: {
         "hover:scale-[1.02]",
         "active:scale-[0.96] active:duration-75",
         isActive 
-          ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+          ? "text-theme-primary bg-theme-elevated-80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated-40 active:bg-theme-elevated-60"
       )}
       style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
@@ -447,7 +463,7 @@ const LanguageOption = ({ code, label, current, onClick }: {
         className={cn(
           "w-4 h-4 rounded-full text-[9px] flex items-center justify-center",
           "transition-all duration-150",
-          isActive ? "text-warm-500 scale-110" : "text-theme-muted/50"
+          isActive ? "text-warm-500 scale-110" : "text-theme-muted-50"
         )}
         style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
       >
@@ -483,8 +499,8 @@ const ThemeOption = ({ theme, currentTheme, onClick, label }: {
         "hover:scale-[1.02]",
         "active:scale-[0.96] active:duration-75",
         isActive 
-          ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+          ? "text-theme-primary bg-theme-elevated-80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated-40 active:bg-theme-elevated-60"
       )}
       style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
@@ -527,8 +543,8 @@ const FontFamilyOption = ({ family, label, current, onClick }: {
         "active:scale-[0.96] active:duration-75",
         fontClass[family],
         isActive 
-          ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+          ? "text-theme-primary bg-theme-elevated-80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated-40 active:bg-theme-elevated-60"
       )}
       style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
@@ -563,8 +579,8 @@ const FontWeightOption = ({ weight, label, current, onClick }: {
         "active:scale-[0.96] active:duration-75",
         weightClass[weight],
         isActive 
-          ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+          ? "text-theme-primary bg-theme-elevated-80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated-40 active:bg-theme-elevated-60"
       )}
       style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
@@ -601,8 +617,8 @@ const PixelStyleOption = ({ style, label, current, onClick }: {
         "active:scale-[0.96] active:duration-75",
         styleClass[style],
         isActive 
-          ? "text-theme-primary bg-theme-elevated/80"
-          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated/40 active:bg-theme-elevated/60"
+          ? "text-theme-primary bg-theme-elevated-80"
+          : "text-theme-muted hover:text-theme-secondary hover:bg-theme-elevated-40 active:bg-theme-elevated-60"
       )}
       style={{ border: isActive ? '0.5px solid var(--accent-warm)' : '0.5px solid var(--border-primary)' }}
     >
@@ -625,10 +641,10 @@ const MinimalSwitch = ({ checked, onChange, variant = 'default' }: {
       onChange={(e) => onChange(e.target.checked)}
       className="sr-only peer"
     />
-    <div 
+    <div
       className={cn(
         "w-9 h-5 rounded-full transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-        "bg-theme-elevated peer-checked:bg-warm-500",
+        "bg-theme-elevated peer-checked:bg-[var(--accent-warm)]",
         "group-hover:shadow-sm",
         variant === 'warning' && checked && "peer-checked:bg-amber-500"
       )}

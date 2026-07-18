@@ -111,7 +111,7 @@ function App() {
       ) : (
         <>
           {bookLoadError && (
-            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md bg-theme-elevated text-theme-primary text-sm shadow-lg border border-theme-muted/10 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md bg-theme-elevated text-theme-primary text-sm shadow-lg border border-theme-muted-10 animate-in fade-in slide-in-from-top-2 duration-300">
               {bookLoadError}
             </div>
           )}

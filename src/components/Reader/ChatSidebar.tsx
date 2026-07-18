@@ -226,8 +226,8 @@ export const ChatSidebar = ({
             "w-9 h-9 flex items-center justify-center rounded-md",
             "text-theme-secondary",
             "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-            "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated/60",
-            "active:scale-95 active:bg-theme-elevated/80"
+            "hover:scale-105 hover:text-theme-primary hover:bg-theme-elevated-60",
+            "active:scale-95 active:bg-theme-elevated-80"
           )}
           title={t('reader.close') as string}
           type="button"
@@ -318,14 +318,14 @@ export const ChatSidebar = ({
           "bg-theme-input",
           hasContent && "border-warm-500/50",
           "transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          "hover:border-theme-muted/30"
+          "hover:border-theme-muted-30"
         )} style={{ borderWidth: '0.5px', borderColor: hasContent ? undefined : 'var(--border-primary)' }}>
           {/* Quote Bar */}
           {quotedText && (
             <div
               className={cn(
                 "h-[22px] flex items-center gap-1.5 px-2 rounded-[10px]",
-                "bg-theme-elevated/60"
+                "bg-theme-elevated-60"
               )}
               onMouseEnter={() => setIsQuoteHover(true)}
               onMouseLeave={() => setIsQuoteHover(false)}
