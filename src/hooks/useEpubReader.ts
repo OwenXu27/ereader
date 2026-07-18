@@ -117,6 +117,10 @@ export const useEpubReader = ({
       height: '100%',
       flow: 'paginated',
       manager: 'default',
+      // 双栏最小宽度（px）：默认 800 会让 11" iPad 竖屏（834）也变成双栏。
+      // 取 900：11" iPad 竖屏单栏、横屏（1194）双栏；桌面 1280 窗口
+      // （阅读区 0.76×1280≈973）保持双栏不变。旋转时随 resize 自动切换。
+      minSpreadWidth: 900,
       allowScriptedContent: useBookStore.getState().settings.allowScriptedContent,
     });
     renditionRef.current = rendition;
